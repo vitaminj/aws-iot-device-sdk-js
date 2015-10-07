@@ -1,0 +1,31 @@
+			EXAMPLE CONCEPTS FOR NODE.JS SDK
+
+Demonstrate a number of possible applications of Icebreaker:
+
+1) Mobile App user monitors and controls Remote Device
+
+2) Remote Device broadcasts data to multiple remote monitors
+
+3) Thing Shadow stores desired state while Remote Device is offline; when 
+   Remote Device comes back online, Mobile App notes that the desired state
+   has been transferred to the Remote Device.
+
+#1: Remote Device is a thermostat controlling a heating/cooling device in a
+    building.  It reports the interior temperature, the current state of the
+    device (e.g. heating/cooling/off), and it also has an on/off control.
+
+    A simulation runs and transfers heat between the building and the outside
+    world.  An insulation factor controls the rate at which heat moves between
+    the two.  If the thermostat is turned off, the temperature in the room
+    will move towards the outside temperature and will eventually reach it.
+
+    Mobile App monitors and controls the thermostat.  The user can set the
+    desired temperature and turn on/off the thermostat.  There is an indication
+    whether or not the reported state matches the desired state (lets the
+    mobile app user know that the Remote Device is still connected).
+
+    The Remote Device side has controls for thermostat on/off and outside
+    temperature.
+
+    Ideally this simulation would be presented in two separate windows with
+    some sort of graphical representation of what's happening.
