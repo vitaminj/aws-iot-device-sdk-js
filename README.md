@@ -1,10 +1,10 @@
-![aws-iot-thing-sdk.js](./IoT.png)
-=======
+# AWS IoT SDK for JavaScript
 
-The aws-iot-thing-sdk.js package allows developers to write JavaScript 
-applications which participate in the AWS IoT service; it is intended for 
-use in embedded devices which support Node.js, but it can be used in other 
-Node.js environments as well.
+The aws-iot-device-sdk.js package allows developers to write JavaScript 
+applications which access the AWS IoT Platform; it is intended
+for use in embedded devices which
+support Node.js, but it can be used in other Node.js environments as 
+well.  
 
 * [Installation](#install)
 * [Background](#background)
@@ -16,25 +16,42 @@ Node.js environments as well.
 <a name="install"></a>
 ## Installation
 
+Installing with npm:
+
 ```sh
-npm install aws-iot-thing-sdk
+npm install aws-iot-device-sdk
 ```
+
+Installing from github:
+
+```sh
+git clone https://github.com/aws/aws-iot-device-sdk-js.git
+cd aws-iot-device-sdk-js
+npm install mqtt
+npm install blessed
+npm install blessed-contrib
+```
+
+Note that the dependencies on 'blessed' and 'blessed-contrib' are required
+only for the [temperature-control.js example program](#temp-control) and 
+will not be necessary in most application environments.
+
 <a name="background"></a>
 ## Background
 
 This package is built on top of mqtt.js and provides two classes: 'device'
 and 'thingShadow'.  The 'device' class loosely wraps mqtt.js to provide a
-secure connection to the AWS IoT service and expose the mqtt.js interfaces
+secure connection to the AWS IoT platform and expose the mqtt.js interfaces
 upward via an instance of the mqtt client.  The 'thingShadow' class implements 
-additional functionality for accessing thing shadows via the AWS IoT 
+additional functionality for accessing Thing Shadows via the AWS IoT
 API; the thingShadow class allows devices to update, be notified of changes to,
-get the current state of, or delete thing shadows from the service.  Thing
-shadows allow applications and devices to collaborate via the AWS IoT service.
-For example, a remote device can update its thing shadow in AWS IoT, allowing
+get the current state of, or delete Thing Shadows from AWS IoT.  Thing
+Shadows allow applications and devices to synchronize their state on the AWS IoT platform.
+For example, a remote device can update its Thing Shadow in AWS IoT, allowing
 a user to view the device's last reported state via a mobile app.  The user
-can also update the device's thing shadow in AWS IoT and the remote device 
+can also update the device's Thing Shadow in AWS IoT and the remote device 
 will synchronize with the new state.  The 'thingShadow' class supports multiple 
-thing shadows per mqtt connection and allows pass-through of non-thing-shadow
+Thing Shadows per mqtt connection and allows pass-through of non-thing-shadow
 topics and mqtt events.
 
 <a name="examples"></a>
@@ -42,7 +59,7 @@ topics and mqtt events.
 
 ### Device Class
 ```js
-var awsIot = require('aws-iot-thing-sdk');
+var awsIot = require('aws-iot-device-sdk');
 
 var device = awsIot.device({
    keyPath: '~/awsCerts/privkey.pem',
@@ -70,7 +87,7 @@ device
 ```
 ### Thing Shadow Class
 ```js
-var awsIot = require('aws-iot-thing-sdk');
+var awsIot = require('aws-iot-device-sdk');
 
 var thingShadows = awsIot.thingShadow({
    keyPath: '~/awsCerts/privkey.pem',
@@ -92,17 +109,23 @@ var clientTokenUpdate;
 
 thingShadows.on('connect', function() {
 //
-// After connecting to the AWS IoT service, register interest in the
-// thing shadow named 'RGBLedLamp'.
+// After connecting to the AWS IoT platform, register interest in the
+// Thing Shadow named 'RGBLedLamp'.
 //
     thingShadows.register( 'RGBLedLamp' );
-
 //
-// Update the thing shadow named 'RGBLedLamp' with the latest device state;
-// save the clientToken so that we can correlate it with status or timeout
-// events.
+// 2 seconds after registering, update the Thing Shadow named 
+// 'RGBLedLamp' with the latest device state and save the clientToken
+// so that we can correlate it with status or timeout events.
 //
-    clientTokenUpdate = thingShadows.update('RGBLedLamp', rgbLedLampState  );
+// Note that the delay is not required for subsequent updates; only
+// the first update after a Thing Shadow registration using default
+// parameters requires a delay.  See API documentation for the update
+// method for more details.
+//
+    setTimeout( function() {
+       clientTokenUpdate = thingShadows.update('RGBLedLamp', rgbLedLampState  );
+       }, 2000 );
     });
 
 thingShadows.on('status', 
@@ -143,7 +166,7 @@ thingShadows.on('timeout',
 ### awsIot.device(options)
 
 Returns an instance of the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) 
-class, configured for a TLS connection with the AWS IoT service and with 
+class, configured for a TLS connection with the AWS IoT platform and with 
 arguments as specified in `options`.  The awsIot-specific arguments are as 
 follows:
 
@@ -164,12 +187,12 @@ Supports all events emitted by the [mqtt.Client()](https://github.com/mqttjs/MQT
 ### awsIot.thingShadow(options)
 
 The `thingShadow` class wraps an instance of the `device` class with additional
-functionality to operate on thing shadows via the AWS IoT API.  The
+functionality to operate on Thing Shadows via the AWS IoT API.  The
 arguments in `options` include all those in the [device class](#device), with 
 the addition of the following arguments specific to the `thingShadow` class:
 
 * `operationTimeout`: the timeout for thing operations (default 30 seconds)
-* `postSubscribeTimeout`: the time to wait after subscribing to an operation's sub-topics prior to publishing on the operation's topic (default 2 seconds)
+* `postSubscribeTimeout`: the time to wait after subscribing to an operation's sub-topics prior to publishing on the operation's topic (default 2.2 seconds)
 
 Supports all events emitted by the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) class; however, the semantics for the 
 `message` event are slightly different and additional events are available
@@ -179,7 +202,7 @@ as described below:
 
 `function(topic, message) {}`
 
-Emitted when a message is received on a topic not related to any thing shadows:
+Emitted when a message is received on a topic not related to any Thing Shadows:
 * `topic` topic of the received packet
 * `message` payload of the received packet
 
@@ -188,7 +211,7 @@ Emitted when a message is received on a topic not related to any thing shadows:
 `function(thingName, stat, clientToken, stateObject) {}`
 
 Emitted when an operation `update|get|delete` completes.
-* `thingName` name of the thing shadow for which the operation has completed
+* `thingName` name of the Thing Shadow for which the operation has completed
 * `stat` status of the operation `accepted|rejected`
 * `clientToken` the operation's clientToken
 * `stateObject` the stateObject returned for the operation
@@ -201,8 +224,8 @@ from each operation.
 
 `function(thingName, stateObject) {}`
 
-Emitted when a delta has been received for a registered thing shadow.
-* `thingName` name of the thing shadow that has received a delta
+Emitted when a delta has been received for a registered Thing Shadow.
+* `thingName` name of the Thing Shadow that has received a delta
 * `stateObject` the stateObject returned for the operation
 
 ### Event `'timeout'`
@@ -210,7 +233,7 @@ Emitted when a delta has been received for a registered thing shadow.
 `function(thingName, clientToken) {}`
 
 Emitted when an operation `update|get|delete` has timed out.
-* `thingName` name of the thing shadow that has received a timeout
+* `thingName` name of the Thing Shadow that has received a timeout
 * `clientToken` the operation's clientToken
 
 Applications can use clientToken values to correlate status events with the
@@ -221,25 +244,27 @@ from each operation.
 <a name="register"></a>
 ### awsIot.thingShadow#register(thingName, [options] )
 
-Register interest in the thing shadow named `thingName`.  The thingShadow class will
-subscribe to any applicable topics, and will fire events for the thing shadow
+Register interest in the Thing Shadow named `thingName`.  The thingShadow class will
+subscribe to any applicable topics, and will fire events for the Thing Shadow
 until [awsIot.thingShadow#unregister()](#unregister) is called with `thingName`.  `options`
-can contain the following arguments to modify how this thing shadow is processed:
+can contain the following arguments to modify how this Thing Shadow is processed:
 
-* `ignoreDeltas`: set to `true` to not subscribe to the `delta` sub-topic for this thing shadow; used in cases where the application is not interested in changes (e.g. update only.) (default `false`)
+* `ignoreDeltas`: set to `true` to not subscribe to the `delta` sub-topic for this Thing Shadow; used in cases where the application is not interested in changes (e.g. update only.) (default `false`)
 * `persistentSubscribe`: set to `false` to unsubscribe from all operation sub-topics while not performing an operation (default `true`)
 * `discardStale`: set to `false` to allow receiving messages with old version numbers (default `true`)
 
 The `persistentSubscribe` argument allows an application to get faster operation
 responses at the expense of potentially receiving more irrelevant response
 traffic (i.e., response traffic for other clients who have registered interest
-in the same thing shadow).  When `persistentSubscribe` is set to `true` (the default),
+in the same Thing Shadow).  When `persistentSubscribe` is set to `true` (the default),
 `postSubscribeTimeout` is forced to 0 and the `thingShadow` class will publish
-immediately on any update, get, or delete operation for this registered thing shadow.
+immediately on any update, get, or delete operation for this registered Thing Shadow.
 When set to `false`, operation sub-topics are only subscribed to during the scope
 of that operation; note that in this mode, update, get, and delete operations will 
 be much slower; however, the application will be less likely to receive irrelevant
 response traffic.
+
+*Note that when `persistentSubscribe` is set to `true` (the default), you must wait the `postSubscribeTimeout` (default 2.2 seconds) between registering interest in the Thing Shadow and performing the first update to it.  After this time interval has expired, you can update the Thing Shadow without waiting.*
 
 The `discardStale` argument allows applications to receive messages which have
 obsolete version numbers.  This can happen when messages are received out-of-order;
@@ -251,7 +276,7 @@ it is).
 <a name="unregister"></a>
 ### awsIot.thingShadow#unregister(thingName)
 
-Unregister interest in the thing shadow named `thingName`.  The thingShadow class
+Unregister interest in the Thing Shadow named `thingName`.  The thingShadow class
 will unsubscribe from all applicable topics and no more events will be fired
 for `thingName`.
 
@@ -259,7 +284,7 @@ for `thingName`.
 <a name="update"></a>
 ### awsIot.thingShadow#update(thingName, stateObject)
 
-Update the thing shadow named `thingName` with the state specified in the 
+Update the Thing Shadow named `thingName` with the state specified in the 
 JavaScript object `stateObject`.  `thingName` must have been previously 
 registered
 using [awsIot.thingShadow#register()](#register).  The thingShadow class will subscribe
@@ -277,7 +302,7 @@ that it should be of atomic type (i.e. numeric or string).
 <a name="get"></a>
 ### awsIot.thingShadow#get(thingName, [clientToken])
 
-Get the current state of the thing shadow named `thingName`, which must have
+Get the current state of the Thing Shadow named `thingName`, which must have
 been previously registered using [awsIot.thingShadow#register()](#register).  The 
 thingShadow class will subscribe to all applicable topics and publish on the 
 <b>get</b> sub-topic.
@@ -294,7 +319,7 @@ that this value should be of atomic type (i.e. numeric or string).
 <a name="delete"></a>
 ### awsIot.thingShadow#delete(thingName, [clientToken])
 
-Delete the thing shadow named `thingName`, which must have been previously
+Delete the Thing Shadow named `thingName`, which must have been previously
 registered using [awsIot.thingShadow#register()](#register).  The thingShadow class
 will subscribe to all applicable topics and publish on the <b>delete</b>
 sub-topic.
@@ -312,62 +337,234 @@ that this value should be of atomic type (i.e. numeric or string).
 ### awsIot.thingShadow#publish(topic, message, [options], [callback])
 
 Identical to the [mqtt.Client#publish()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#publish) 
-method, with the restriction that the topic may not represent a thing shadow.
+method, with the restriction that the topic may not represent a Thing Shadow.
 This method allows the user to publish messages to topics on the same connection
-used to access thing shadows.
+used to access Thing Shadows.
 
 -------------------------------------------------------
 <a name="subscribe"></a>
 ### awsIot.thingShadow#subscribe(topic, [options], [callback])
 
 Identical to the [mqtt.Client#subscribe()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#subscribe) 
-method, with the restriction that the topic may not represent a thing shadow.
+method, with the restriction that the topic may not represent a Thing Shadow.
 This method allows the user to subscribe to messages from topics on the same 
-connection used to access thing shadows.
+connection used to access Thing Shadows.
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
 ### awsIot.thingShadow#unsubscribe(topic, [options], [callback])
 
 Identical to the [mqtt.Client#unsubscribe()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#unsubscribe) 
-method, with the restriction that the topic may not represent a thing shadow.
+method, with the restriction that the topic may not represent a Thing Shadow.
 This method allows the user to unsubscribe from topics on the same 
-used to access thing shadows.
+used to access Thing Shadows.
 
 <a name="programs"></a>
 ## Example Programs
 
-This package includes two example programs which demonstrate usage of the APIs:
-`examples/device-example.js` and `examples/thing-example.js`.  Both are
-configured with command line parameters, and are designed to be run in pairs
-(i.e., two copies of the same program run simultaneously and cooperate with
-one another).  Run the example programs as follows:
+The 'examples' directory contains several programs which demonstrate usage
+of the AWS IoT APIs:
+
+* device-example.js: demonstrate simple MQTT publish and subscribe 
+operations.
+
+* echo-example.js: test Thing Shadow operation by echoing all delta 
+state updates to the update topic; used in conjunction with the AWS
+IoT console to verify connectivity with the AWS IoT platform.
+
+* thing-example.js: use a Thing Shadow to automatically synchronize
+state between a simulated device and a control application.
+
+* temperature-control.js: an interactive device simulation which uses
+Thing Shadows.
+
+The example programs use command line parameters to set options.  To see
+the available options, run the program and specify the '-h' option as
+follows:
 
 ```sh
-#
-# Each example runs as two processes, one using --test-mode=1 and the
-# other using --test-mode=2
-#
-# DEVICE CLASS EXAMPLE PROGRAM
-#
-node ./examples/device-example.js -f=$CERTS_DIR -t 1 &
-
-node ./examples/device-example.js -f=$CERTS_DIR -t 2 &
-
-#
-# THING SHADOW CLASS EXAMPLE PROGRAM
-#
-node ./examples/thing-example.js -f=$CERTS_DIR -t 1 &
-
-node ./examples/thing-example.js -f=$CERTS_DIR -t 2 &
+node examples/<EXAMPLE-PROGRAM> -h
 ```
 
-Environment variables and parameters in the above examples are as follows:
-* `CERTS_DIR` location of the certificates and private keys, contains
-    privkey.pem (the private key associated with your AWS IoT certificate), 
-    cert.pem (your AWS IoT certificate), and aws-iot-rootCA.crt (the AWS 
-    IoT root CA certificate).
-* `-t` test mode, 1 to simulate mobile application or 2 to simulate device
+<a name="certificates"></a>
+### Certificates 
+
+The example programs require certificates (created using either the AWS
+IoT console or the AWS IoT cli) in order to authenticate with AWS IoT.
+Each example program uses command line options to specify the
+names and/or locations of certificates as follows:
+
+#### Specify a directory containing default-named certificates
+
+```sh
+  -f, --certificate-dir=DIR        look in DIR for certificates
+```
+
+The --certificate-dir (-f) option will read all certificates from the
+directory specified.  Certificates must be named as follows:
+
+* cert.pem: your AWS IoT certificate
+* privkey.pem: the private key associated with your AWS IoT certificate
+* aws-iot-rootCA.crt: the root CA certificate [(available from Symantec here)](https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem)
+
+#### Specify certificate names and locations individually
+
+```sh
+  -k, --private-key=FILE           use FILE as private key
+  -c, --client-certificate=FILE    use FILE as client certificate
+  -a, --ca-certificate=FILE        use FILE as CA certificate
+```
+
+### device-example.js
+
+device-example.js is run as two processes which communicate with one
+another via the AWS IoT platform using MQTT publish and subscribe.
+The command line option '--test-mode (-t)' is used to set which role
+each process performs.  It's easiest to run each process in its own
+terminal window so that you can see the output generated by each.  Note
+that in the following examples, all certificates are located in the
+~/certs directory and have the default names as specified in the 
+[Certificates section](#certificates).
+
+#### _Terminal Window 1_
+```sh
+node examples/device-example.js -f ~/certs --test-mode=1
+```
+
+#### _Terminal Window 2_
+```sh
+node examples/device-example.js -f ~/certs --test-mode=2
+```
+
+### thing-example.js
+Similar to device-example.js, thing-example.js is also run as two 
+processes which communicate with another via the AWS IoT platform.
+thing-example.js uses a Thing Shadow to synchronize state between the
+two processes, and the command line option '--test-mode (-t)' is used
+to set which role each process performs.  As with device-example.js, 
+it's best to run each process in its own terminal window.  Note 
+that in the following examples, all certificates are located in the
+~/certs directory and have the default names as specified in the 
+[Certificates section](#certificates).
+
+#### _Terminal Window 1_
+```sh
+node examples/thing-example.js -f ~/certs --test-mode=1
+```
+
+#### _Terminal Window 2_
+```sh
+node examples/thing-example.js -f ~/certs --test-mode=2
+```
+
+### echo-example.js
+echo-example.js is used in conjunction with the 
+[AWS Iot Console](https://console.aws.amazon.com/iot) to verify 
+connectivity with the AWS IoT platform and to perform interactive 
+observation of Thing Shadow operation.  In the following example, all
+certificates are located in the ~/certs directory and have the default
+names as specified in the [Certificates section](#certificates).
+
+```sh
+node examples/echo-example.js -f ~/certs --thing-name testThing1
+```
+
+<a name="temp-control"></a>
+### temperature-control.js
+temperature-control.js is an interactive simulation which demonstrates
+how Thing Shadows can be used to easily synchronize applications 
+and internet-connected devices.  
+
+Like thing-example.js, temperature-control.js runs in two
+separate terminal windows and is configured via command-line options;
+in the following example, all certificates are located in the ~/certs
+directory and have the default names as specified in the 
+[Certificates section](#certificates).  The process running
+with '--test-mode=2' simulates an internet-connected temperature control 
+device, and the process running with '--test-mode=1' simulates a mobile
+application which is monitoring/controlling it.  The processes may be
+run on different hosts if desired.
+
+temperature-control.js
+uses the [blessed.js](https://github.com/chjj/blessed) and [blessed-contrib.js](https://github.com/yaronn/blessed-contrib) libraries to provide an 
+interactive terminal interface; it looks best on an 80x25 terminal with a
+black background and white or green text and requires UTF-8 character
+encoding.  
+#### _Terminal Window 1_
+```sh
+node examples/temperature-control.js -f ~/certs --test-mode=1
+```
+![Temperature Control Simulation (Device Mode)](./doc/temperature-control-device-mode.png "temperature-control.js, device mode")
+
+#### _Terminal Window 2_
+```sh
+node examples/temperature-control.js -f ~/certs --test-mode=2
+```
+![Temperature Control Simulation (Mobile App Mode)](./doc/temperature-control-mobile-app-mode.png "temperature-control.js, mobile app mode")
+
+#### _Using the simulation_
+The simulated temperature control device has two controls; _Setpoint_ and
+_Status_.  _Status_ controls whether or not the device is active, and
+_Setpoint_ controls the interior temperature the device will attempt to 
+achieve.  In addition, the device reports the current interior and exterior
+temperatures as well as its operating state (_heating_, _cooling_, or
+_stopped_).
+
+Two Thing Shadows are used to connect the simulated device and mobile
+application; one contains the controls and the other contains the 
+measured temperatures and operating state.  Both processes can update the
+controls, but only the device can update the measured temperatures and
+the operating state.
+
+Controlling the simulation is done using the <kbd>up</kbd>, 
+<kbd>down</kbd>, <kbd>left</kbd>, <kbd>right</kbd>, and 
+<kbd>Enter</kbd> keys as follows:
+
+* <kbd>up</kbd> increase the Setpoint
+* <kbd>down</kbd> decrease the Setpoint
+* <kbd>left</kbd> move left on the menu bar
+* <kbd>right</kbd> move right on the menu bar
+* <kbd>Enter</kbd> select the current menu option
+
+##### Operating State
+
+The operating state of the device is indicated by the color of the
+Interior temperature field as follows:
+
+* Red: _heating_
+* Cyan: _cooling_
+* White: _stopped_
+
+##### Log
+
+The log window displays events of interest, e.g. network connectivity,
+_Status_ toggles, re-synchronization with the Thing Shadow, etc...
+
+##### Menu Options
+
+* Mode: Toggle the device _Status_.  _Status_ can be controlled from both
+the simulated device and the mobile application.
+* Network: Toggle the network connectivity of the device or mobile 
+application; this can be used to observe how both sides re-synchronize 
+when connectivity is restored.
+
+In this example, the device is disconnected from the network, and then 
+the _Setpoint_ is changed so that the device's operational state changes
+to _cooling_.
+
+![Temperature Control Simulation (Device Mode, Network Disconnected)](./doc/temperature-control-device-mode-network-off.png "Device with network disconnected")
+
+Because the device is disconnected from the network, the mobile app isn't
+aware of the changes to _Setpoint_ and the interior temperature.  When
+the device is reconnected to the network, the mobile app will 
+re-synchronize with the device's state.
+
+![Temperature Control Simulation (Mobile App Mode, Device Network Disconnected)](./doc/temperature-control-mobile-app-mode-device-network-off.png "Mobile App doesn't receive updates due to disconnected device")
+
+##### Exiting the Simulation
+
+The simulation can be exited at any time by pressing <kbd>q</kbd>, 
+<kbd>Ctrl</kbd>+<kbd>c</kbd>, or by selecting 'exit' on the menu bar.
 
 
 <a name="license"></a>
