@@ -499,13 +499,11 @@ encoding.
 ```sh
 node examples/temperature-control.js -f ~/certs --test-mode=1
 ```
-![Temperature Control Simulation (Device Mode)](./doc/temperature-control-device-mode.png "temperature-control.js, device mode")
 
 #### _Terminal Window 2_
 ```sh
 node examples/temperature-control.js -f ~/certs --test-mode=2
 ```
-![Temperature Control Simulation (Mobile App Mode)](./doc/temperature-control-mobile-app-mode.png "temperature-control.js, mobile app mode")
 
 #### _Using the simulation_
 The simulated temperature control device has two controls; _Setpoint_ and
@@ -552,19 +550,6 @@ the simulated device and the mobile application.
 * Network: Toggle the network connectivity of the device or mobile 
 application; this can be used to observe how both sides re-synchronize 
 when connectivity is restored.
-
-In this example, the device is disconnected from the network, and then 
-the _Setpoint_ is changed so that the device's operational state changes
-to _cooling_.
-
-![Temperature Control Simulation (Device Mode, Network Disconnected)](./doc/temperature-control-device-mode-network-off.png "Device with network disconnected")
-
-Because the device is disconnected from the network, the mobile app isn't
-aware of the changes to _Setpoint_ and the interior temperature.  When
-the device is reconnected to the network, the mobile app will 
-re-synchronize with the device's state.
-
-![Temperature Control Simulation (Mobile App Mode, Device Network Disconnected)](./doc/temperature-control-mobile-app-mode-device-network-off.png "Mobile App doesn't receive updates due to disconnected device")
 
 ##### Exiting the Simulation
 
