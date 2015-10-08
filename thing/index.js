@@ -189,7 +189,10 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
       catch( err )
       {
-         console.error('failed parsing JSON \''+payload.toString()+'\', '+err);
+         if (deviceOptions.debug === true)
+         {
+            console.error('failed parsing JSON \''+payload.toString()+'\', '+err);
+         }
          return;
       }
       var clientToken = stateObject.clientToken;
@@ -461,7 +464,10 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
       else
       {
-          console.error('attempting to '+operation+' unknown thing: ', thingName);
+          if (deviceOptions.debug === true)
+          {
+             console.error('attempting to '+operation+' unknown thing: ', thingName);
+          }
       }
       return rc;
    }
@@ -524,7 +530,10 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
       else
       {
-         console.error('thing already registered: ', thingName);
+         if (deviceOptions.debug === true)
+         {
+            console.error('thing already registered: ', thingName);
+         }
       }
    }
 
@@ -571,7 +580,10 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
       else
       {
-         console.error('attempting to unregister unknown thing: ', thingName);
+         if (deviceOptions.debug === true)
+         {
+            console.error('attempting to unregister unknown thing: ', thingName);
+         }
       }
    }
 
