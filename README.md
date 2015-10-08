@@ -1,7 +1,7 @@
 # AWS IoT SDK for JavaScript
 The aws-iot-device-sdk.js package allows developers to write JavaScript 
 applications which access the AWS IoT Platform; it is intended for use in
-embedded devices which support Node.js, but it can be used in any other Node.js 
+embedded devices which support Node.js, but it can be used in other Node.js 
 environments as well.
 
 * [Overview](#overview)
