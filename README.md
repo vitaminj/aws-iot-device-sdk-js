@@ -1,17 +1,36 @@
 # AWS IoT SDK for JavaScript
-
 The aws-iot-device-sdk.js package allows developers to write JavaScript 
 applications which access the AWS IoT Platform; it is intended for use in
-embedded devices which support Node.js, but it can be used in other Node.js 
+embedded devices which support Node.js, but it can be used in any other Node.js 
 environments as well.
 
 * [Installation](#install)
-* [Background](#background)
 * [Examples](#examples)
-* [API](#api)
+* [API Documentation](#api)
 * [Example Programs](#programs)
 * [License](#license)
 * [Support](#support)
+
+##Overview
+This document provides instructions on how to install and configure the AWS IoT device SDK for node.js including multiple examples of how to use the SDK.
+
+###MQTT connection
+This package is built on top of mqtt.js and provides two classes: 'device'
+and 'thingShadow'.  The 'device' class loosely wraps mqtt.js to provide a
+secure connection to the AWS IoT platform and expose the mqtt.js interfaces
+upward via an instance of the mqtt client.
+
+###Thing Shadows
+The 'thingShadow' class implements additional functionality for accessing Thing Shadows via the AWS IoT
+API; the thingShadow class allows devices to update, be notified of changes to,
+get the current state of, or delete Thing Shadows from AWS IoT.  Thing
+Shadows allow applications and devices to synchronize their state on the AWS IoT platform.
+For example, a remote device can update its Thing Shadow in AWS IoT, allowing
+a user to view the device's last reported state via a mobile app.  The user
+can also update the device's Thing Shadow in AWS IoT and the remote device 
+will synchronize with the new state.  The 'thingShadow' class supports multiple 
+Thing Shadows per mqtt connection and allows pass-through of non-thing-shadow
+topics and mqtt events.
 
 <a name="install"></a>
 ## Installation
@@ -35,24 +54,6 @@ npm install blessed-contrib
 Note that the dependencies on 'blessed' and 'blessed-contrib' are required
 only for the [temperature-control.js example program](#temp-control) and 
 will not be necessary in most application environments.
-
-<a name="background"></a>
-## Background
-
-This package is built on top of mqtt.js and provides two classes: 'device'
-and 'thingShadow'.  The 'device' class loosely wraps mqtt.js to provide a
-secure connection to the AWS IoT platform and expose the mqtt.js interfaces
-upward via an instance of the mqtt client.  The 'thingShadow' class implements 
-additional functionality for accessing Thing Shadows via the AWS IoT
-API; the thingShadow class allows devices to update, be notified of changes to,
-get the current state of, or delete Thing Shadows from AWS IoT.  Thing
-Shadows allow applications and devices to synchronize their state on the AWS IoT platform.
-For example, a remote device can update its Thing Shadow in AWS IoT, allowing
-a user to view the device's last reported state via a mobile app.  The user
-can also update the device's Thing Shadow in AWS IoT and the remote device 
-will synchronize with the new state.  The 'thingShadow' class supports multiple 
-Thing Shadows per mqtt connection and allows pass-through of non-thing-shadow
-topics and mqtt events.
 
 <a name="examples"></a>
 ## Examples
@@ -148,7 +149,7 @@ thingShadows.on('timeout',
 ```
 
 <a name="api"></a>
-## API
+## API Documentation
 
   * <a href="#device"><code>awsIot.<b>device()</b></code></a>
   * <a href="#thingShadow"><code>awsIot.<b>thingShadow()</b></code></a>
@@ -573,7 +574,5 @@ The simulation can be exited at any time by pressing <kbd>q</kbd>,
 This SDK is distributed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0), see LICENSE.txt and NOTICE.txt for more information.
 <a name="suport"></a>
 ## Support
-
-[AWS IoT Forum](https://forums.aws.amazon.com/forum.jspa?forumID=210)
-
-<IoTDeviceSDKSupport@amazon.com>
+If you have technical questions about AWS IoT Device SDK, use the [AWS IoT Forum](https://forums.aws.amazon.com/forum.jspa?forumID=210).
+For any other questions on AWS IoT, contact AWS Support.
