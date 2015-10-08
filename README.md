@@ -13,18 +13,18 @@ environments as well.
 * [Support](#support)
 
 <a name="overview"></a>
-##Overview
+## Overview
 This document provides instructions on how to install and configure the AWS 
 IoT device SDK for Node.js and includes examples demonstrating use of the
 SDK APIs.
 
-###MQTT connection
+### MQTT connection
 This package is built on top of mqtt.js and provides two classes: 'device'
 and 'thingShadow'.  The 'device' class loosely wraps mqtt.js to provide a
 secure connection to the AWS IoT platform and expose the mqtt.js interfaces
 upward via an instance of the mqtt client.
 
-###Thing Shadows
+### Thing Shadows
 The 'thingShadow' class implements additional functionality for accessing Thing Shadows via the AWS IoT
 API; the thingShadow class allows devices to update, be notified of changes to,
 get the current state of, or delete Thing Shadows from AWS IoT.  Thing
