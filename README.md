@@ -4,6 +4,7 @@ applications which access the AWS IoT Platform; it is intended for use in
 embedded devices which support Node.js, but it can be used in any other Node.js 
 environments as well.
 
+* [Overview](#overview)
 * [Installation](#install)
 * [Examples](#examples)
 * [API Documentation](#api)
@@ -11,8 +12,11 @@ environments as well.
 * [License](#license)
 * [Support](#support)
 
+<a name="overview"></a>
 ##Overview
-This document provides instructions on how to install and configure the AWS IoT device SDK for node.js including multiple examples of how to use the SDK.
+This document provides instructions on how to install and configure the AWS 
+IoT device SDK for Node.js and includes examples demonstrating use of the
+SDK APIs.
 
 ###MQTT connection
 This package is built on top of mqtt.js and provides two classes: 'device'
@@ -575,4 +579,4 @@ This SDK is distributed under the [Apache License, Version 2.0](http://www.apach
 <a name="suport"></a>
 ## Support
 If you have technical questions about AWS IoT Device SDK, use the [AWS IoT Forum](https://forums.aws.amazon.com/forum.jspa?forumID=210).
-For any other questions on AWS IoT, contact AWS Support.
+For any other questions on AWS IoT, contact [AWS Support](https://aws.amazon.com/contact-us).
