@@ -16,5 +16,5 @@
 /*
 * Expose AWS IoT Embedded Javascript SDK modules
 */
-module.exports.device = require(./device);
-module.exports.thingShadow = require(./thing);
+module.exports.device = require('./device');
+module.exports.thingShadow = require('./thing');
