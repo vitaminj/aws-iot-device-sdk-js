@@ -1,7 +1,7 @@
 {
   "name": "aws-iot-device-sdk",
   "description": "AWS IoT JavaScript SDK for Embedded Devices",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
      "name":"Amazon Web Services",
      "email":"",
@@ -28,6 +28,7 @@
   "keywords" : ["api", "amazon", "aws", "iot", "mqtt"],
   "dependencies": {
     "mqtt": "1.4.3",
+    "minimist": "1.2.0",
     "blessed": "0.1.81",
     "blessed-contrib": "2.3.3"
   }

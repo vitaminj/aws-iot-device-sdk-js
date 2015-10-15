@@ -18,7 +18,7 @@
 //npm deps
 
 //app deps
-const thingShadow = require('../thing');
+const thingShadow = require('..').thingShadow;
 const isUndefined = require('../common/lib/is-undefined');
 const cmdLineProcess   = require('./lib/cmdline');
 
@@ -96,5 +96,5 @@ module.exports = cmdLineProcess;
 
 if (require.main === module) {
   cmdLineProcess('connect to the AWS IoT service and perform thing shadow echo',
-                 process.argv.slice(2), processTest, ' ', true )
+                 process.argv.slice(2), processTest, ' ', true );
 }

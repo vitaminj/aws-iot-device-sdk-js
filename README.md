@@ -19,9 +19,9 @@ IoT device SDK for Node.js and includes examples demonstrating use of the
 SDK APIs.
 
 ### MQTT connection
-This package is built on top of mqtt.js and provides two classes: 'device'
-and 'thingShadow'.  The 'device' class loosely wraps mqtt.js to provide a
-secure connection to the AWS IoT platform and expose the mqtt.js interfaces
+This package is built on top of [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) and provides two classes: 'device'
+and 'thingShadow'.  The 'device' class loosely wraps [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) to provide a
+secure connection to the AWS IoT platform and expose the [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) interfaces
 upward via an instance of the mqtt client.
 
 ### Thing Shadows
@@ -33,7 +33,7 @@ For example, a remote device can update its Thing Shadow in AWS IoT, allowing
 a user to view the device's last reported state via a mobile app.  The user
 can also update the device's Thing Shadow in AWS IoT and the remote device 
 will synchronize with the new state.  The 'thingShadow' class supports multiple 
-Thing Shadows per mqtt connection and allows pass-through of non-thing-shadow
+Thing Shadows per mqtt connection and allows pass-through of non-Thing-Shadow
 topics and mqtt events.
 
 <a name="install"></a>
@@ -67,9 +67,9 @@ will not be necessary in most application environments.
 var awsIot = require('aws-iot-device-sdk');
 
 var device = awsIot.device({
-   keyPath: '~/awsCerts/privkey.pem',
-  certPath: '~/awsCerts/cert.pem',
-    caPath: '~/awsCerts/ca.crt',
+   keyPath: '~/awsCerts/private.pem.key',
+  certPath: '~/awsCerts/certificate.pem.crt',
+    caPath: '~/awsCerts/root-CA.crt',
   clientId: 'myAwsClientId',
     region: 'us-east-1'
 });
@@ -95,9 +95,9 @@ device
 var awsIot = require('aws-iot-device-sdk');
 
 var thingShadows = awsIot.thingShadow({
-   keyPath: '~/awsCerts/privkey.pem',
-  certPath: '~/awsCerts/cert.pem',
-    caPath: '~/awsCerts/ca.crt',
+   keyPath: '~/awsCerts/private.pem.key',
+  certPath: '~/awsCerts/certificate.pem.crt',
+    caPath: '~/awsCerts/root-CA.crt',
   clientId: 'myAwsClientId',
     region: 'us-east-1'
 });
@@ -241,7 +241,7 @@ Emitted when an operation `update|get|delete` has timed out.
 * `thingName` name of the Thing Shadow that has received a timeout
 * `clientToken` the operation's clientToken
 
-Applications can use clientToken values to correlate status events with the
+Applications can use clientToken values to correlate timeout events with the
 operations that they are associated with by saving the clientTokens returned
 from each operation.
 
@@ -374,11 +374,15 @@ of the AWS IoT APIs:
 operations.
 
 * echo-example.js: test Thing Shadow operation by echoing all delta 
-state updates to the update topic; used in conjunction with the AWS
-IoT console to verify connectivity with the AWS IoT platform.
+state updates to the update topic; used in conjunction with the [AWS
+IoT Console](https://console.aws.amazon.com/iot) to verify connectivity 
+with the AWS IoT platform.
 
 * thing-example.js: use a Thing Shadow to automatically synchronize
 state between a simulated device and a control application.
+
+* thing-passthrough-example.js: demonstrate use of a Thing Shadow with
+pasthrough of standard MQTT publish and subscribe messages.
 
 * temperature-control.js: an interactive device simulation which uses
 Thing Shadows.
@@ -394,9 +398,10 @@ node examples/<EXAMPLE-PROGRAM> -h
 <a name="certificates"></a>
 ### Certificates 
 
-The example programs require certificates (created using either the AWS
-IoT console or the AWS IoT cli) in order to authenticate with AWS IoT.
-Each example program uses command line options to specify the
+The example programs require certificates (created using either the [AWS
+IoT Console](https://console.aws.amazon.com/iot) or the 
+[AWS IoT CLI](https://aws.amazon.com/cli/)) in order to authenticate with
+AWS IoT.  Each example program uses command line options to specify the
 names and/or locations of certificates as follows:
 
 #### Specify a directory containing default-named certificates
@@ -406,11 +411,11 @@ names and/or locations of certificates as follows:
 ```
 
 The --certificate-dir (-f) option will read all certificates from the
-directory specified.  Certificates must be named as follows:
+directory specified.  Default certificate names are as follows:
 
-* cert.pem: your AWS IoT certificate
-* privkey.pem: the private key associated with your AWS IoT certificate
-* aws-iot-rootCA.crt: the root CA certificate [(available from Symantec here)](https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem)
+* certificate.pem.crt: your AWS IoT certificate
+* private.pem.key: the private key associated with your AWS IoT certificate
+* root-CA.crt: the root CA certificate [(available from Symantec here)](https://www.symantec.com/content/en/us/enterprise/verisign/roots/VeriSign-Class%203-Public-Primary-Certification-Authority-G5.pem)
 
 #### Specify certificate names and locations individually
 
@@ -419,6 +424,37 @@ directory specified.  Certificates must be named as follows:
   -c, --client-certificate=FILE    use FILE as client certificate
   -a, --ca-certificate=FILE        use FILE as CA certificate
 ```
+
+The '-f' (certificate directory) option can be combined with these so that
+you don't have to specify absolute pathnames for each file.
+
+#### Use a configuration file
+
+The [AWS IoT Console](https://console.aws.amazon.com/iot) can generate JSON 
+configuration data specifying the parameters required to connect a device
+to the AWS IoT Platform.  The JSON configuration data includes pathnames
+to certificates, the hostname and port number, etc...  The command line 
+option '--configuration-file (-F)' is used when reading parameters from a
+configuration file.
+
+```sh
+  -F, --configuration-file=FILE    use FILE (JSON format) for configuration
+```
+
+The configuration file is in JSON format, and may contain the following
+properties:
+
+* host - the host name to connect to
+* port - the port number to use when connecting to the host (8883 for AWS IoT)
+* clientId - the client ID to use when connecting
+* privateKey - file containing the private key
+* clientCert - file containing the client certificate
+* caCert - file containing the CA certificate
+* thingName - thing name to use
+
+The '-f' (certificate directory) and '-F' (configuration file) options
+can be combined so that you don't have to use absolute pathnames in the
+configuration file.
 
 ### device-example.js
 
@@ -443,7 +479,7 @@ node examples/device-example.js -f ~/certs --test-mode=2
 
 ### thing-example.js
 Similar to device-example.js, thing-example.js is also run as two 
-processes which communicate with another via the AWS IoT platform.
+processes which communicate with one another via the AWS IoT platform.
 thing-example.js uses a Thing Shadow to synchronize state between the
 two processes, and the command line option '--test-mode (-t)' is used
 to set which role each process performs.  As with device-example.js, 
@@ -462,16 +498,41 @@ node examples/thing-example.js -f ~/certs --test-mode=1
 node examples/thing-example.js -f ~/certs --test-mode=2
 ```
 
+### thing-passthrough-example.js
+Similar to thing-example.js, thing-passthrough-example.js is also run 
+as two processes which communicate with one another via the AWS IoT platform.
+thing-passthrough-example.js uses a Thing Shadow to synchronize state
+from one process to another, and uses MQTT publish/subscribe to send
+information in the other direction.  The command line option '--test-mode (-t)'
+is used to set which role each process performs.  As with thing-example.js, 
+it's best to run each process in its own terminal window.  Note 
+that in the following examples, all certificates are located in the
+~/certs directory and have the default names as specified in the 
+[Certificates section](#certificates).
+
+#### _Terminal Window 1_
+```sh
+node examples/thing-passthrough-example.js -f ~/certs --test-mode=1
+```
+
+#### _Terminal Window 2_
+```sh
+node examples/thing-passthrough-example.js -f ~/certs --test-mode=2
+```
+
 ### echo-example.js
 echo-example.js is used in conjunction with the 
 [AWS Iot Console](https://console.aws.amazon.com/iot) to verify 
 connectivity with the AWS IoT platform and to perform interactive 
-observation of Thing Shadow operation.  In the following example, all
-certificates are located in the ~/certs directory and have the default
-names as specified in the [Certificates section](#certificates).
+observation of Thing Shadow operation.  In the following example, the
+program is run using the configuration file '../config.json', and
+the certificates are located in the '~/certs' directory.  Here, the
+'-f' (certificate directory) and '-F' (configuration file) options
+are combined so that the configuration file doesn't need to contain
+absolute pathnames.
 
 ```sh
-node examples/echo-example.js -f ~/certs --thing-name testThing1
+node examples/echo-example.js -F ../config.json -f ~/certs --thing-name testThing1
 ```
 
 <a name="temp-control"></a>
@@ -499,11 +560,13 @@ encoding.
 ```sh
 node examples/temperature-control.js -f ~/certs --test-mode=1
 ```
+![temperature-control.js, 'mobile application' mode](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-mobile-app-mode.png)
 
 #### _Terminal Window 2_
 ```sh
 node examples/temperature-control.js -f ~/certs --test-mode=2
 ```
+![temperature-control.js, 'device' mode](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-device-mode.png)
 
 #### _Using the simulation_
 The simulated temperature control device has two controls; _Setpoint_ and
@@ -538,6 +601,11 @@ Interior temperature field as follows:
 * Cyan: _cooling_
 * White: _stopped_
 
+The following example shows the temperature control simulation in 'device' mode
+while the operating state is 'heating'.
+
+![temperature-control.js, 'device' mode, 'heating' operating state](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-device-mode-heating.png)
+
 ##### Log
 
 The log window displays events of interest, e.g. network connectivity,
@@ -550,6 +618,17 @@ the simulated device and the mobile application.
 * Network: Toggle the network connectivity of the device or mobile 
 application; this can be used to observe how both sides re-synchronize 
 when connectivity is restored.
+
+In this example, the mobile application is disconnected from the network.  Although it has
+requested that the Setpoint be lowered to 58 degrees, the command can't be sent to
+the device as there is no network connectivity, so the operating state still shows as
+'stopped'.  When the mobile application is reconnected to the network, it will attempt
+to update the Thing Shadow for the device's controls; if no control changes have been
+made on the device side during the disconnection period, the device will synchronize to
+the mobile application's requested state; otherwise, the mobile application will re-
+synchronize to the device's current state.
+
+![temperature-control.js, 'mobile application' mode, network disconnected](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-mobile-app-mode-network-disconnected.png)
 
 ##### Exiting the Simulation
 

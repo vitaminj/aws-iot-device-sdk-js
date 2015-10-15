@@ -18,7 +18,7 @@
 //npm deps
 
 //app deps
-const thingShadow = require('../thing');
+const thingShadow = require('..').thingShadow;
 const isUndefined = require('../common/lib/is-undefined');
 const cmdLineProcess   = require('./lib/cmdline');
 
@@ -155,10 +155,20 @@ thingShadows
 thingShadows 
   .on('close', function() {
     console.log('close');
+    thingShadows.unregister( 'RGBLedLamp' );
   });
 thingShadows 
   .on('reconnect', function() {
     console.log('reconnect');
+    if (args.testMode === 1)
+    {
+       thingShadows.register( 'RGBLedLamp', { ignoreDeltas: true,
+                                              persistentSubscribe: true } );
+    }
+    else
+    {
+       thingShadows.register( 'RGBLedLamp' );
+    }
   });
 thingShadows 
   .on('offline', function() {
@@ -226,5 +236,5 @@ module.exports = cmdLineProcess;
 
 if (require.main === module) {
   cmdLineProcess('connect to the AWS IoT service and demonstrate thing shadow APIs, test modes 1-2',
-                 process.argv.slice(2), processTest )
+                 process.argv.slice(2), processTest );
 }

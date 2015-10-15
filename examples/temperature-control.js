@@ -20,7 +20,7 @@
 //app deps
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
-const thingShadow = require('../thing');
+const thingShadow = require('..').thingShadow;
 const isUndefined = require('../common/lib/is-undefined');
 const cmdLineProcess   = require('./lib/cmdline');
 
@@ -329,13 +329,19 @@ thingShadows
 thingShadows 
   .on('close', function() {
     thingShadows.unregister( 'TemperatureControl' );
+    thingShadows.unregister( 'TemperatureStatus' );
     log.log('close');
   });
 
 thingShadows 
   .on('reconnect', function() {
     log.log('reconnect/re-register');
+//
+// Upon reconnection, re-register our thing shadows.
+//
     thingShadows.register( 'TemperatureControl', { 
+                                              persistentSubscribe: true } );
+    thingShadows.register( 'TemperatureStatus', { 
                                               persistentSubscribe: true } );
 //
 // After re-registering, wait for a few seconds and then try to update
@@ -502,5 +508,5 @@ module.exports = cmdLineProcess;
 
 if (require.main === module) {
   cmdLineProcess('connect to the AWS IoT service and demonstrate thing shadow APIs, test modes 1-2',
-                 process.argv.slice(2), processTest )
+                 process.argv.slice(2), processTest );
 }

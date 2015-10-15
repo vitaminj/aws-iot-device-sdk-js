@@ -47,6 +47,7 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
                     '  -c, --client-certificate=FILE    use FILE as client certificate\n' +
                     '  -a, --ca-certificate=FILE        use FILE as CA certificate\n' +
                     '  -f, --certificate-dir=DIR        look in DIR for certificates\n' +
+                    '  -F, --configuration-file=FILE    use FILE (JSON format) for configuration\n' +
                     '  -r, --reconnect-period-ms=VALUE  use VALUE as the reconnect period (ms)\n' +
                     '  -t, --test-mode=[1-n]            set test mode for multi-process tests\n' +
                     '  -T, --thing-name=THINGNAME       access thing shadow named THINGNAME\n' +
@@ -54,9 +55,9 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
                     ' Default values\n\n' + 
                     '  aws-region                       us-east-1\n' +
                     '  client-id                        $USER<random-integer>\n' +
-                    '  private-key                      ./privkey.pem\n' +
-                    '  client-certificate               ./cert.pem\n' +
-                    '  ca-certificate                   ./aws-iot-rootCA.crt\n' +
+                    '  private-key                      private.pem.key\n' +
+                    '  client-certificate               certificate.pem.crt\n' +
+                    '  ca-certificate                   root-CA.crt\n' +
                     '  reconnect-period-ms              3000ms\n' +
                     '  delay-ms                         4000ms\n' +
                     '  test-mode                        1\n');
@@ -65,7 +66,8 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
         }
     };
     args = minimist(args, {
-    string: ['certificate-dir', 'aws-region', 'private-key', 'client-certificate', 'ca-certificate', 'client-id', 'thing-name' ],
+    string: ['certificate-dir', 'aws-region', 'private-key', 'client-certificate', 
+             'ca-certificate', 'client-id', 'thing-name', 'configuration-file' ],
     integer: [ 'reconnect-period-ms', 'test-mode', 'delay-ms' ],
     boolean: ['help'],
     alias: {
@@ -75,6 +77,7 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
       clientCert: ['c', 'client-certificate'],
       caCert: ['a', 'ca-certificate'],
       certDir: ['f', 'certificate-dir'],
+      configFile: ['F', 'configuration-file'],
       reconnectPeriod: ['r', 'reconnect-period-ms'],
       testMode: ['t', 'test-mode'],
       thingName: ['T', 'thing-name'],
@@ -85,9 +88,9 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
     default: {
       region: 'us-east-1',
       clientId: clientIdDefault,
-      privateKey: 'privkey.pem',
-      clientCert: 'cert.pem',
-      caCert: 'aws-iot-rootCA.crt',
+      privateKey: 'private.pem.key',
+      clientCert: 'certificate.pem.crt',
+      caCert: 'root-CA.crt',
       testMode: 1,
       reconnectPeriod: 3*1000,     /* milliseconds */
       delay: 4*1000,               /* milliseconds */
@@ -98,12 +101,81 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
       doHelp();
       return;
   }
+//
+// If the user has specified a directory where certificates are located,
+// prepend it to all of the certificate filenames.
+//
   if (!isUndefined( args.certDir ))
   {
      args.privateKey=args.certDir+'/'+args.privateKey;
      args.clientCert=args.certDir+'/'+args.clientCert;
      args.caCert=args.certDir+'/'+args.caCert;
   }
+//
+// If the configuration file is defined, read it in and set the parameters based
+// on the values inside; these will override any other arguments specified on 
+// the command line.
+//
+  if (!isUndefined( args.configFile ))
+  {
+     if (!fs.existsSync( args.configFile ))
+     {
+        console.error( '\n' + args.configFile + ' doesn\'t exist (--help for usage)\n');
+        return;
+     }
+     var config = JSON.parse( fs.readFileSync( args.configFile, 'utf8' ));     
+
+     if (!isUndefined( config.privateKey ))
+     {
+        if (!isUndefined( args.certDir ))
+        {
+           args.privateKey=args.certDir+'/'+config.privateKey;
+        }
+        else
+        {
+           args.privateKey = config.privateKey;
+        }
+     }
+     if (!isUndefined( config.clientCert ))
+     {
+        if (!isUndefined( args.certDir ))
+        {
+           args.clientCert=args.certDir+'/'+config.clientCert;
+        }
+        else
+        {
+           args.clientCert = config.clientCert;
+        }
+     }
+     if (!isUndefined( config.caCert ))
+     {
+        if (!isUndefined( args.certDir ))
+        {
+           args.caCert=args.certDir+'/'+config.caCert;
+        }
+        else
+        {
+           args.caCert     = config.caCert;
+        }
+     }
+     if (!isUndefined( config.host ))
+     {
+        args.host       = config.host;
+     }
+     if (!isUndefined( config.port ))
+     {
+        args.port       = config.port;
+     }
+     if (!isUndefined( config.clientId ))
+     {
+        args.clientId   = config.clientId;
+     }
+     if (!isUndefined( config.thingName ))
+     {
+        args.thingName  = config.thingName;
+     }
+  }
+
 //
 // Client certificate, private key, and CA certificate must all exist.
 //

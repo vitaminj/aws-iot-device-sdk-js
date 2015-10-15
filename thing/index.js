@@ -34,6 +34,15 @@ function buildThingShadowTopic( thingName, operation, type )
    return '$aws/things/'+thingName+'/shadow/'+operation;
 }
 
+function isReservedTopic( topic )
+{
+   if (topic.substring( 0, 12 ) == '$aws/things/')
+   {
+      return true;
+   }
+   return false;
+}
+
 function isThingShadowTopic( topicTokens, direction )
 {
     var rc = false;
@@ -632,52 +641,45 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
       return that._thingOperation( thingName, 'delete', stateObject );
    }
-
-//
-// Non-thing operations (pass-through to device instance).
-//
-   this._nonThingOperation = function( operation, topic, 
-                                       options, callback, message )
-   {
-      if (topic.substring( 0, 12 ) != '$aws/things/')
-      {
-         if (!isUndefined(message))
-         {
-            device.operation( topic, message, options, callback );
-         }
-         else
-         {
-            device.operation( topic, options, callback );
-         }
-      }
-      else
-      {
-         console.error( '\''+topic+
-                        '\' is a thing topic, not allowed');
-      }
-   }
-
 //
 // Publish on non-thing topics.
 //
    this.publish = function( topic, message, options, callback ) {
-      that._nonThingOperation( device.publish, topic, 
-                               options, callback, message );
+      if (!isReservedTopic( topic ))
+      {
+         device.publish( topic, message, options, callback );
+      }
+      else
+      {
+         throw('cannot publish to reserved topic \''+topic+'\'');
+      }
    }
 
 //
 // Subscribe to non-thing topics.
 //
    this.subscribe = function( topic, options, callback ) {
-      that._nonThingOperation( device.subscribe, topic, 
-                               options, callback );
+      if (!isReservedTopic( topic ))
+      {
+         device.subscribe( topic, options, callback );
+      }
+      else
+      {
+         throw('cannot subscribe to reserved topic \''+topic+'\'');
+      }
    }
 //
 // Unsubscribe from non-thing topics.
 //
    this.unsubscribe = function( topic, options, callback ) {
-      that._nonThingOperation( device.unsubscribe, topic, 
-                               options, callback );
+      if (!isReservedTopic( topic ))
+      {
+         device.unsubscribe( topic, options, callback );
+      }
+      else
+      {
+         throw('cannot unsubscribe from reserved topic \''+topic+'\'');
+      }
    }
 //
 // This is an unpublished API used for testing.
