@@ -20,6 +20,7 @@ const fs = require('fs');
 
 //app deps
 const isUndefined = require('./is-undefined');
+const exceptions = require('./exceptions');
 
 //begin module
 /**
@@ -32,19 +33,86 @@ const isUndefined = require('./is-undefined');
 module.exports = function(options) {
 
   // verify certificate paths
-  if (isUndefined(options.keyPath)) {
-    throw new Error(exceptions.INVALID_KEY_PATH_OPTION);
+  if (isUndefined(options.keyPath) && isUndefined(options.privateKey)) {
+    throw new Error(exceptions.NO_KEY_OPTION);
   }
-  if (isUndefined(options.certPath)) {
-    throw new Error(exceptions.INVALID_CERT_PATH_OPTION);
+  if (isUndefined(options.certPath) && isUndefined(options.clientCert)) {
+    throw new Error(exceptions.NO_CERT_OPTION);
   }
-  if (isUndefined(options.caPath)) {
-    throw new Error(exceptions.INVALID_CA_PATH_OPTION);
+  if (isUndefined(options.caPath) && isUndefined(options.caCert)) {
+    throw new Error(exceptions.NO_CA_OPTION);
   }
-  //parse pem files
-  options.key = fs.readFileSync(options.keyPath);
-  options.cert = fs.readFileSync(options.certPath);
-  options.ca = fs.readFileSync(options.caPath);
+//
+// Certificates and private keys may be passed in files using options
+// ending in 'Path', e.g. 'keyPath', 'certPath', and 'caPath'.  In addition,
+// they can also be passed in as buffers or files using the options
+// 'privateKey', 'clientCert', and 'caCert'.  This second set is the one
+// that the AWS Console generates a JSON configuration document for.
+//
+  if (!isUndefined(options.caCert))  {
+     if (Buffer.isBuffer( options.caCert ))  {
+        options.ca = options.caCert;
+     }
+     else
+     {
+        if (fs.existsSync(options.caCert)) {
+           options.ca = fs.readFileSync(options.caCert);
+        }
+        else {
+           throw new Error(exceptions.INVALID_CA_CERT_OPTION);
+        }
+     }
+  }
+  if (!isUndefined(options.privateKey))  {
+     if (Buffer.isBuffer( options.privateKey ))  {
+        options.key = options.privateKey;
+     }
+     else
+     {
+        if (fs.existsSync(options.privateKey)) {
+           options.key = fs.readFileSync(options.privateKey);
+        }
+        else {
+           throw new Error(exceptions.INVALID_PRIVATE_KEY_OPTION);
+        }
+     }
+  }
+  if (!isUndefined(options.clientCert))  {
+     if (Buffer.isBuffer( options.clientCert ))  {
+        options.cert = options.clientCert;
+     }
+     else
+     {
+        if (fs.existsSync(options.clientCert)) {
+           options.cert = fs.readFileSync(options.clientCert);
+        }
+        else {
+           throw new Error(exceptions.INVALID_CLIENT_CERT_OPTION);
+        }
+     }
+  }
+
+  // Parse PEM files.  Options ending in 'Path' must be files
+  // and will override options which do not end in 'Path'.
+
+  if (fs.existsSync(options.keyPath)) {
+     options.key = fs.readFileSync(options.keyPath);
+  }
+  else if (!isUndefined(options.keyPath)) {
+     throw new Error(exceptions.INVALID_KEY_PATH_OPTION);
+  }
+  if (fs.existsSync(options.certPath)) {
+     options.cert = fs.readFileSync(options.certPath);
+  }
+  else if (!isUndefined(options.certPath)) {
+     throw new Error(exceptions.INVALID_CERT_PATH_OPTION);
+  }
+  if (fs.existsSync(options.caPath)) {
+     options.ca = fs.readFileSync(options.caPath);
+  }
+  else if (!isUndefined(options.caPath)) {
+     throw new Error(exceptions.INVALID_CA_PATH_OPTION);
+  }
 
   // request certificate from partner
   options.requestCert = true;

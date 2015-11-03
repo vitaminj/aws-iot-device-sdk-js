@@ -20,13 +20,11 @@
 //app deps
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
-const thingShadow = require('..').thingShadow;
-const isUndefined = require('../common/lib/is-undefined');
-const cmdLineProcess   = require('./lib/cmdline');
+const thingShadow = require('../..').thingShadow;
+const isUndefined = require('../../common/lib/is-undefined');
+const cmdLineProcess   = require('../lib/cmdline');
 
-
-function processTest( args, argsRemaining ) {
-
+function processTest( args ) {
 //
 // Construct user interface
 //
@@ -81,7 +79,7 @@ var deviceMonitorState={ intTemp: 72, extTemp: 45, curState: 'stopped' };
 var networkEnabled=true;
 
 var lcd1 = grid.set( 1, 1, 2, 3, contrib.lcd, {
-label: "Setpoint",
+label: 'Setpoint',
     segmentWidth: 0.06,
     segmentInterval: 0.11,
     strokeWidth: 0.1,
@@ -92,7 +90,7 @@ label: "Setpoint",
 } );
 
 var lcd2 = grid.set( 3, 1, 2, 3, contrib.lcd, { 
-label: "Interior",
+label: 'Interior',
     segmentWidth: 0.06,
     segmentInterval: 0.11,
     strokeWidth: 0.1,
@@ -102,7 +100,7 @@ label: "Interior",
 } );
 
 var lcd3 = grid.set( 5, 1, 2, 3, contrib.lcd, { 
-label: "Exterior",
+label: 'Exterior',
     segmentWidth: 0.06,
     segmentInterval: 0.11,
     strokeWidth: 0.1,
@@ -112,7 +110,7 @@ label: "Exterior",
 } );
 
 var lcd4 = grid.set( 2, 4, 2, 3, contrib.lcd, { 
-label: "Status",
+label: 'Status',
     segmentWidth: 0.06,
     segmentInterval: 0.11,
     strokeWidth: 0.1,
@@ -122,7 +120,7 @@ label: "Status",
 } );
 
 var lcd5 = grid.set( 4, 4, 2, 3, contrib.lcd, { 
-label: "Network",
+label: 'Network',
     segmentWidth: 0.06,
     segmentInterval: 0.11,
     strokeWidth: 0.1,
@@ -132,15 +130,12 @@ label: "Network",
 } );
 
 var log = grid.set( 1, 7, 6, 5, contrib.log, {
-label: "Log",
+label: 'Log'
 } );
-
-
 
 screen.key(['escape', 'q', 'C-c'], function(ch, key) {
   return process.exit(0);
 });
-
 
 lcd1.setDisplay(deviceControlState.setPoint+'F');
 lcd2.setDisplay(deviceMonitorState.intTemp+'F');
@@ -148,7 +143,7 @@ lcd3.setDisplay(deviceMonitorState.extTemp+'F');
 lcd4.setDisplay(deviceControlState.enabled===true?' ON':'OFF');
 lcd5.setDisplay(networkEnabled===true?' ON':'OFF');
 
-screen.render()
+screen.render();
 
 //
 // The thing module exports the thing class through which we
@@ -162,7 +157,7 @@ const thingShadows = thingShadow({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod,
+  reconnectPeriod: args.reconnectPeriod
 });
 
 var opClientToken;
@@ -210,10 +205,7 @@ var bar = blessed.listbar({
       bg: 'black',
       hover: {
         bg: 'blue'
-      },
-      //focus: {
-      //  bg: 'blue'
-      //}
+      }
     },
     selected: {
       bg: 'blue'
@@ -275,7 +267,6 @@ screen.append(title);
 
 bar.focus();
 
-
 screen.key('up', function( ch, key ) {
 if (deviceControlState.setPoint < 90)
 {
@@ -285,7 +276,7 @@ if (deviceControlState.setPoint < 90)
    {
       opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
    }
-   screen.render()
+   screen.render();
 }
 });
 screen.key('down', function( ch, key ) {
@@ -297,7 +288,7 @@ if (deviceControlState.setPoint > 50)
    {
       opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
    }
-   screen.render()
+   screen.render();
 }
 });
 
@@ -390,7 +381,7 @@ thingShadows
             deviceControlState = stateObject.state.desired;
             lcd1.setDisplay(deviceControlState.setPoint+'F');
             lcd4.setDisplay(deviceControlState.enabled===true?' ON':'OFF');
-            screen.render()
+            screen.render();
          }
       }
   });
@@ -425,7 +416,7 @@ thingShadows
                deviceMonitorState.curState=stateObject.state.curState;
             }
          }
-         screen.render()
+         screen.render();
       }
   });
 
@@ -441,7 +432,6 @@ thingShadows
 
       setInterval( function() {
          var difference;
-         var logMsg = '';
 //
 // If the device is enabled, the internal temperature will move towards
 // the setpoint; otherwise, it will move towards the external temperature.

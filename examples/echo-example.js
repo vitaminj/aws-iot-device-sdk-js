@@ -24,7 +24,7 @@ const cmdLineProcess   = require('./lib/cmdline');
 
 //begin module
 
-function processTest( args, argsRemaining ) {
+function processTest( args ) {
 
 if (isUndefined( args.thingName ))
 {
@@ -43,7 +43,7 @@ const thingShadows = thingShadow({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod,
+  reconnectPeriod: args.reconnectPeriod
 });
 
 //
@@ -88,7 +88,7 @@ thingShadows
 
 thingShadows
   .on('timeout', function(thingName, clientToken) {
-      console.warn( 'timeout: '+thingName);
+      console.warn( 'timeout: '+thingName+', clientToken='+clientToken);
   });
 }
 

@@ -36,7 +36,7 @@ function buildThingShadowTopic( thingName, operation, type )
 
 function isReservedTopic( topic )
 {
-   if (topic.substring( 0, 12 ) == '$aws/things/')
+   if (topic.substring( 0, 12 ) === '$aws/things/')
    {
       return true;
    }
@@ -46,7 +46,7 @@ function isReservedTopic( topic )
 function isThingShadowTopic( topicTokens, direction )
 {
     var rc = false;
-    if (topicTokens[0] = '$aws')
+    if (topicTokens[0] === '$aws')
     {
 //
 // Thing shadow topics have the form:
@@ -90,14 +90,14 @@ function isThingShadowTopic( topicTokens, direction )
 
 //begin module
 
-function thingShadowsClient( deviceOptions, thingShadowOptions ) {
+function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
 //
 // Force instantiation using the 'new' operator; this will cause inherited
 // constructors (e.g. the 'events' class) to be called.
 //
-   if (!(this instanceof thingShadowsClient))
+   if (!(this instanceof ThingShadowsClient))
    {
-      return new thingShadowsClient( deviceOptions, thingShadowOptions );
+      return new ThingShadowsClient( deviceOptions, thingShadowOptions );
    }
 
 //
@@ -185,16 +185,17 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       {
          device[devFunction]( topics );
       }
-   }
+   };
 
 //
 // Private function to handle messages and dispatch them accordingly.
 //
    this._handleMessages = function( thingName, operation, operationStatus, payload )
    {
+      var stateObject = { };
       try
       {
-         var stateObject = JSON.parse(payload.toString());
+         stateObject = JSON.parse(payload.toString());
       }
       catch( err )
       {
@@ -216,7 +217,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
 // Update the thing version on every accepted or delta message which 
 // contains it.
 //
-      if ((!isUndefined(version)) && (operationStatus != 'rejected'))
+      if ((!isUndefined(version)) && (operationStatus !== 'rejected'))
       {
 //
 // The thing shadow version is incremented by AWS IoT and should always
@@ -293,7 +294,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
 // the operations they are associated with.
 //
       this.emit( 'status', thingName, operationStatus, clientToken, stateObject );
-   }
+   };
 
    device
      .on('connect', function() {
@@ -309,7 +310,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
        that.emit( 'offline' );
      });
    device.on('error', function(error) {
-       that.emit( 'error' );
+       that.emit( 'error', error );
      });
    device.on('message', function(topic, payload) {
 
@@ -418,12 +419,12 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
                                        [ operation ],
                                        [ 'accepted', 'rejected' ],
                                        'subscribe',
-               function(err, granted) {
+               function(err) {
 //
 // If 'stateObject' is defined, publish it to the publish topic for this
 // thingName+operation.
 //
-                  if (err != null)
+                  if (err !== null)
                   {
                      console.warn('failed subscription to accepted/rejected topics');
                      return;
@@ -479,7 +480,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
           }
       }
       return rc;
-   }
+   };
 
    this.register = function( thingName, options ) {
       if (!thingShadows.hasOwnProperty( thingName )) {
@@ -544,7 +545,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
             console.error('thing already registered: ', thingName);
          }
       }
-   }
+   };
 
    this.unregister = function( thingName ) {
       if (thingShadows.hasOwnProperty( thingName )) {
@@ -594,7 +595,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
             console.error('attempting to unregister unknown thing: ', thingName);
          }
       }
-   }
+   };
 
 //
 // Perform an update operation on the given thing shadow.
@@ -614,7 +615,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
          console.error('message can\'t contain \'version\' property');
       }
       return rc;
-   }
+   };
 
 //
 // Perform a get operation on the given thing shadow; allow the user
@@ -628,7 +629,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
          stateObject.clientToken = clientToken;
       }
       return that._thingOperation( thingName, 'get', stateObject );
-   }
+   };
 
 //
 // Perform a delete operation on the given thing shadow.
@@ -640,7 +641,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
          stateObject.clientToken = clientToken;
       }
       return that._thingOperation( thingName, 'delete', stateObject );
-   }
+   };
 //
 // Publish on non-thing topics.
 //
@@ -653,7 +654,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       {
          throw('cannot publish to reserved topic \''+topic+'\'');
       }
-   }
+   };
 
 //
 // Subscribe to non-thing topics.
@@ -667,7 +668,7 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       {
          throw('cannot subscribe to reserved topic \''+topic+'\'');
       }
-   }
+   };
 //
 // Unsubscribe from non-thing topics.
 //
@@ -680,19 +681,27 @@ function thingShadowsClient( deviceOptions, thingShadowOptions ) {
       {
          throw('cannot unsubscribe from reserved topic \''+topic+'\'');
       }
-   }
+   };
+//
+// Close the device connection; this will be passed through to
+// the MQTT class.
+//
+   this.end = function( force, callback ) {
+      device.end( force, callback );
+   };
+
 //
 // This is an unpublished API used for testing.
 //
    this.setConnectionStatus = function( connectionStatus ) {
       connected=connectionStatus;
-   }
+   };
    events.EventEmitter.call(this);
 }
 
 //
 // Allow instances to listen in on events that we produce for them
 //
-inherits(thingShadowsClient, events.EventEmitter );
+inherits(ThingShadowsClient, events.EventEmitter );
 
-module.exports = thingShadowsClient;
+module.exports = ThingShadowsClient;

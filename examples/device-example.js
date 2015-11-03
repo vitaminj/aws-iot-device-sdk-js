@@ -23,7 +23,7 @@ const cmdLineProcess = require('./lib/cmdline');
 
 //begin module
 
-function processTest( args, argsRemaining ) {
+function processTest( args ) {
 //
 // The device module exports an MQTT instance, which will attempt
 // to connect to the AWS IoT endpoint configured in the arguments.
@@ -36,7 +36,7 @@ const device = deviceModule({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod,
+  reconnectPeriod: args.reconnectPeriod
 });
 
 var timeout;
@@ -59,7 +59,7 @@ device
     {
         device.subscribe('topic_2');
     }
-    if ((Math.max(args.delay,minimumDelay) ) != args.delay)
+    if ((Math.max(args.delay,minimumDelay) ) !== args.delay)
     {
         console.log( 'substituting '+ minimumDelay + 'ms delay for ' + args.delay + 'ms...' );
     }
@@ -69,12 +69,12 @@ device
         if (args.testMode === 1)
         {
             device.publish('topic_2', JSON.stringify({
-            mode_1_process: count }));
+            mode1Process: count }));
         }
         else
         {
             device.publish('topic_1', JSON.stringify({
-            mode_2_process: count }));
+            mode2Process: count }));
         }
     }, Math.max(args.delay,minimumDelay) );  // clip to minimum
     });

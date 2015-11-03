@@ -23,12 +23,21 @@ const minimist  = require('minimist');
 const isUndefined = require('../../common/lib/is-undefined');
 
 //begin module
-const clientIdDefault = process.env.USER.concat(Math.floor((Math.random() * 100000) + 1));
+var clientIdDefault;
+if (!isUndefined( process.env.USER ))
+{
+   clientIdDefault = process.env.USER.concat(Math.floor((Math.random() * 100000) + 1));
+}
+else
+{
+   clientIdDefault = 'nouser'+(Math.floor((Math.random() * 100000) + 1));
+}
+
 module.exports = function( description, args, processFunction, argumentHelp ) {
-    doHelp = function() {
+    var doHelp = function() {
         var progName=process.argv[1];
         var lastSlash=progName.lastIndexOf('/');
-        if (lastSlash !=-1)
+        if (lastSlash !== -1)
         {
            progName=progName.substring(lastSlash+1,progName.length);
         }
@@ -93,9 +102,11 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
       caCert: 'root-CA.crt',
       testMode: 1,
       reconnectPeriod: 3*1000,     /* milliseconds */
-      delay: 4*1000,               /* milliseconds */
-    }, 
-    unknown: function() {console.error('***unrecognized options***'); doHelp(); process.exit(1); }
+      delay: 4*1000                /* milliseconds */
+    },
+    unknown: function() {
+       console.error('***unrecognized options***'); doHelp(); process.exit(1); 
+       }
   });
   if (args.help) {
       doHelp();
@@ -166,7 +177,13 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
      {
         args.port       = config.port;
      }
-     if (!isUndefined( config.clientId ))
+//
+// When using a JSON configuration document from the AWS Console, allow
+// the client ID to be overriden by the command line option for client ID.
+// This is required to run the example programs from a JSON configuration
+// document, since both instances must use different client IDs.
+//
+     if (!isUndefined( config.clientId ) && isUndefined(args.clientId))
      {
         args.clientId   = config.clientId;
      }
@@ -196,4 +213,4 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
   }
 
   processFunction( args );
-}
+};

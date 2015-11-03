@@ -23,7 +23,7 @@ const cmdLineProcess   = require('./lib/cmdline');
 
 //begin module
 
-function processTest( args, argsRemaining ) {
+function processTest( args ) {
 //
 // Instantiate the thing shadow class.
 //
@@ -33,7 +33,7 @@ const thingShadows = thingShadow({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod,
+  reconnectPeriod: args.reconnectPeriod
 });
 
 var count=1;

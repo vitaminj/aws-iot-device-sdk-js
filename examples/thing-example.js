@@ -24,7 +24,7 @@ const cmdLineProcess   = require('./lib/cmdline');
 
 //begin module
 
-function processTest( args, argsRemaining ) {
+function processTest( args ) {
 //
 // The thing module exports the thing class through which we
 // can register and unregister interest in thing shadows, perform
@@ -37,7 +37,7 @@ const thingShadows = thingShadow({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod,
+  reconnectPeriod: args.reconnectPeriod
 });
 
 //
@@ -49,7 +49,7 @@ var role='DEVICE';
 
 if (args.testMode===1)
 {
-   role='MOBILE APP'
+   role='MOBILE APP';
 }
 var rgbValues={ red: 0, green: 0, blue: 0 };
 
@@ -76,7 +76,6 @@ thingShadows
     {
        thingShadows.register( 'RGBLedLamp' );
     }
-    var count=0;
     var rgbLedLampState = { };
 
     var opFunction = function() {
@@ -133,7 +132,7 @@ thingShadows
 // probably a version conflict, and it can be resolved by simply getting the
 // latest thing shadow.
 //
-                if (statusType != 'accepted')
+                if (statusType !== 'accepted')
                 {
                    mobileAppOperation = 'get';
                 }

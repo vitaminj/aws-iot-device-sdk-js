@@ -9,6 +9,7 @@ environments as well.
 * [Examples](#examples)
 * [API Documentation](#api)
 * [Example Programs](#programs)
+* [Troubleshooting](#troubleshooting)
 * [License](#license)
 * [Support](#support)
 
@@ -50,14 +51,8 @@ Installing from github:
 ```sh
 git clone https://github.com/aws/aws-iot-device-sdk-js.git
 cd aws-iot-device-sdk-js
-npm install mqtt
-npm install blessed
-npm install blessed-contrib
+npm install
 ```
-
-Note that the dependencies on 'blessed' and 'blessed-contrib' are required
-only for the [temperature-control.js example program](#temp-control) and 
-will not be necessary in most application environments.
 
 <a name="examples"></a>
 ## Examples
@@ -165,6 +160,7 @@ thingShadows.on('timeout',
   * <a href="#publish"><code>awsIot.thingShadow#<b>publish()</b></code></a>
   * <a href="#subscribe"><code>awsIot.thingShadow#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>awsIot.thingShadow#<b>unsubscribe()</b></code></a>
+  * <a href="#end"><code>awsIot.thingShadow#<b>end()</b></code></a>
 
 -------------------------------------------------------
 <a name="device"></a>
@@ -177,9 +173,14 @@ follows:
 
   * `region`: the AWS IoT region you will operate in (default 'us-east-1')
   * `clientId`: the client ID you will use to connect to AWS IoT
-  * `certPath`: path of the client certificate associated with your AWS account
-  * `keyPath`: path of the private key file for your client certificate
-  * `caPath`: path of your CA certificate
+  * `certPath`: path of the client certificate file
+  * `keyPath`: path of the private key file associated with the client certificate
+  * `caPath`: path of your CA certificate file 
+  * `clientCert`: same as `certPath`, but can also accept a buffer containing client certificate data
+  * `privateKey`: same as `keyPath`, but can also accept a buffer containing private key data
+  * `caCert`: same as `caPath`, but can also accept a buffer containing CA certificate data
+
+All certificates and keys must be in PEM format.
 
 `options` also contains arguments specific to mqtt.  See [the mqtt client documentation]
 (https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) for details 
@@ -364,6 +365,15 @@ method, with the restriction that the topic may not represent a Thing Shadow.
 This method allows the user to unsubscribe from topics on the same 
 used to access Thing Shadows.
 
+-------------------------------------------------------
+<a name="end"></a>
+### awsIot.thingShadow#end([force], [callback])
+
+Invokes the [mqtt.Client#end()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#end) 
+method on the MQTT connection owned by the `thingShadow` class.  The `force` 
+and `callback` parameters are optional and identical in function to the 
+parameters in the [mqtt.Client#end()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#end) method.
+
 <a name="programs"></a>
 ## Example Programs
 
@@ -373,7 +383,7 @@ of the AWS IoT APIs:
 * device-example.js: demonstrate simple MQTT publish and subscribe 
 operations.
 
-* echo-example.js: test Thing Shadow operation by echoing all delta 
+* [echo-example.js](#echoExample): test Thing Shadow operation by echoing all delta 
 state updates to the update topic; used in conjunction with the [AWS
 IoT Console](https://console.aws.amazon.com/iot) to verify connectivity 
 with the AWS IoT platform.
@@ -384,7 +394,7 @@ state between a simulated device and a control application.
 * thing-passthrough-example.js: demonstrate use of a Thing Shadow with
 pasthrough of standard MQTT publish and subscribe messages.
 
-* temperature-control.js: an interactive device simulation which uses
+* temperature-control/temperature-control.js: an interactive device simulation which uses
 Thing Shadows.
 
 The example programs use command line parameters to set options.  To see
@@ -428,6 +438,7 @@ directory specified.  Default certificate names are as follows:
 The '-f' (certificate directory) option can be combined with these so that
 you don't have to specify absolute pathnames for each file.
 
+<a href="configurationFile></a>
 #### Use a configuration file
 
 The [AWS IoT Console](https://console.aws.amazon.com/iot) can generate JSON 
@@ -452,9 +463,13 @@ properties:
 * caCert - file containing the CA certificate
 * thingName - thing name to use
 
-The '-f' (certificate directory) and '-F' (configuration file) options
+##### Tips for using JSON configuration files
+* _The '-f' (certificate directory) and '-F' (configuration file) options
 can be combined so that you don't have to use absolute pathnames in the
-configuration file.
+configuration file._
+* _When using a configuration file to run any of the example programs other 
+than [echo-example.js](#echoExample), you **must** specify different client 
+IDs for each process using the '-i' command line option._
 
 ### device-example.js
 
@@ -520,9 +535,10 @@ node examples/thing-passthrough-example.js -f ~/certs --test-mode=1
 node examples/thing-passthrough-example.js -f ~/certs --test-mode=2
 ```
 
+<a name="echoExample"></a>
 ### echo-example.js
 echo-example.js is used in conjunction with the 
-[AWS Iot Console](https://console.aws.amazon.com/iot) to verify 
+[AWS IoT Console](https://console.aws.amazon.com/iot) to verify 
 connectivity with the AWS IoT platform and to perform interactive 
 observation of Thing Shadow operation.  In the following example, the
 program is run using the configuration file '../config.json', and
@@ -551,20 +567,28 @@ device, and the process running with '--test-mode=1' simulates a mobile
 application which is monitoring/controlling it.  The processes may be
 run on different hosts if desired.
 
+#### _Installing Dependencies_
 temperature-control.js
 uses the [blessed.js](https://github.com/chjj/blessed) and [blessed-contrib.js](https://github.com/yaronn/blessed-contrib) libraries to provide an 
 interactive terminal interface; it looks best on an 80x25 terminal with a
 black background and white or green text and requires UTF-8 character
-encoding.  
-#### _Terminal Window 1_
+encoding.  You'll need to install these libraries in the examples/temperature-control
+directory as follows:
+
 ```sh
-node examples/temperature-control.js -f ~/certs --test-mode=1
+cd examples/temperature-control
+npm install
+```
+
+#### _Running the Simulation - Terminal Window 1_
+```sh
+node examples/temperature-control/temperature-control.js -f ~/certs --test-mode=1
 ```
 ![temperature-control.js, 'mobile application' mode](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-mobile-app-mode.png)
 
-#### _Terminal Window 2_
+#### _Running the Simulation - Terminal Window 2_
 ```sh
-node examples/temperature-control.js -f ~/certs --test-mode=2
+node examples/temperature-control/temperature-control.js -f ~/certs --test-mode=2
 ```
 ![temperature-control.js, 'device' mode](https://s3.amazonaws.com/aws-iot-device-sdk-js-supplemental/images/temperature-control-device-mode.png)
 
@@ -635,6 +659,23 @@ synchronize to the device's current state.
 The simulation can be exited at any time by pressing <kbd>q</kbd>, 
 <kbd>Ctrl</kbd>+<kbd>c</kbd>, or by selecting 'exit' on the menu bar.
 
+<a name="troubleshooting"></a>
+## Troubleshooting
+
+If you have problems connecting to the AWS IoT Platform when using this SDK or
+running the example programs, there are a few things to check:
+
+* _Region Mismatch_:  If you didn't create your 
+certificate in the default region ('us-east-1'), you'll need to specify 
+the region (e.g., 'us-west-2') that you created your certificate in.  When
+using the example programs, this can be done with the '-g' command line option.
+* _Duplicate Client IDs_:  Within your AWS account, the AWS IoT platform
+will only allow one connection per client ID.  Many of the example programs
+run as two processes which communicate with one another.  If you don't
+specify a client ID, the example programs will generate random client IDs,
+but if you are using a [JSON configuration file](#configurationFile), you'll
+need to explictly specify client IDs for both programs using the '-i' command
+line option.
 
 <a name="license"></a>
 ## License

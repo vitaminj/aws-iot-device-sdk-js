@@ -12,24 +12,22 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+/*jshint node:true*/
+'use strict';
 
-//node.js deps
+var gulp = require('gulp'),
+    jshint = require('gulp-jshint'),
+    concat = require('gulp-concat'),
+    jscs = require('gulp-jscs');
 
-//npm deps
+gulp.task('default', ['jshint']);
 
-//app deps
-
-//begin module
-/**
- * This is the exposed module.
- * This method determines if an object is undefined.
- *
- * @param {Object} value
- * @access public
- */
-module.exports = function(value) {
-  if ((typeof(value) === 'undefined') || (typeof(value) === null)) {
-      return true;
-  }
-  return false;
-};
+gulp.task('jshint', function() {
+  console.log('Analyzing source with JSHint and JSCS');
+  return gulp
+    .src(['common/lib/*.js','examples/**/*.js','device/*.js','thing/*.js','index.js'])
+    .pipe(jshint())
+    .pipe(jshint.reporter('jshint-stylish', {verbose: true}))
+    .pipe(jshint.reporter('fail'))
+    .pipe(jscs());
+});

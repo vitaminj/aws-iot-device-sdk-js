@@ -36,23 +36,36 @@ module.exports = function(options) {
 // Validate options, set default reconnect period if not specified.
 //
   if (isUndefined(options) ||
-      Object.keys(options).length === 0 ||
-      isUndefined(options.region)) {
+      Object.keys(options).length === 0) {
       throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
   }
   if (isUndefined(options.reconnectPeriod)) {
     options.reconnectPeriod = reconnectPeriod;
   }
 
-  //set port and protocol
-  options.port = 8883;
+  // set port, do not override existing definitions if available
+  if (isUndefined(options.port))
+  {
+     options.port = 8883;
+  }
   options.protocol = 'mqtts';
-  options.host = 'data.iot.'+options.region+'.amazonaws.com';
+  
+  if (isUndefined(options.host))
+  {
+     if (!(isUndefined(options.region)))
+     {
+        options.host = 'data.iot.'+options.region+'.amazonaws.com';
+     }
+     else
+     {
+        throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
+     }
+  }
 
   //read and map certificates
   tlsReader(options);
 
-  if ((!isUndefined(options)) && (options.debug==true))
+  if ((!isUndefined(options)) && (options.debug===true))
   {
      console.log(options);
      console.log('attempting new mqtt connection...');
