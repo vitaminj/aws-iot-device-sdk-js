@@ -12,15 +12,16 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
-/**
- * This method adds some syntatic sugar around arrays containing an object (instead of using indexOf).
- *
- * @param {Object} object
- * @access public
- */
-Array.prototype.contains = function(object) {
-  if (this.indexOf(object) !== -1) {
-    return true;
-  }
-  return false;
-};
+
+//node.js deps
+
+//npm deps
+const websocket = require('websocket-stream');
+
+//app deps
+
+function buildBuilder (client, opts) {
+  return websocket(opts.url, { protocol: 'mqttv3.1' } );
+}
+
+module.exports = buildBuilder;
