@@ -36,7 +36,11 @@ const device = deviceModule({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod
+  reconnectPeriod: args.reconnectPeriod,
+  protocol: args.Protocol,
+  port: args.Port,
+  host: args.Host,
+  debug: args.Debug
 });
 
 var timeout;

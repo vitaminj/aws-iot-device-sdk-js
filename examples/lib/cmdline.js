@@ -52,6 +52,9 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
                     ' Options\n\n' +
                     '  -g, --aws-region=REGION          AWS IoT region\n' +
                     '  -i, --client-id=ID               use ID as client ID\n' +
+                    '  -H, --host-name=HOST             connect to HOST (overrides --aws-region)\n' +
+                    '  -p, --port=PORT                  connect to PORT (overrides defaults)\n' +
+                    '  -P, --protocol=PROTOCOL          connect using PROTOCOL (mqtts|wss)\n' +
                     '  -k, --private-key=FILE           use FILE as private key\n' +
                     '  -c, --client-certificate=FILE    use FILE as client certificate\n' +
                     '  -a, --ca-certificate=FILE        use FILE as CA certificate\n' +
@@ -60,10 +63,12 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
                     '  -r, --reconnect-period-ms=VALUE  use VALUE as the reconnect period (ms)\n' +
                     '  -t, --test-mode=[1-n]            set test mode for multi-process tests\n' +
                     '  -T, --thing-name=THINGNAME       access thing shadow named THINGNAME\n' +
-                    '  -d, --delay-ms=VALUE             delay in milliseconds before publishing\n\n' +
+                    '  -d, --delay-ms=VALUE             delay in milliseconds before publishing\n' +
+                    '  -D, --debug                      print additional debugging information\n\n' +
                     ' Default values\n\n' + 
                     '  aws-region                       us-east-1\n' +
                     '  client-id                        $USER<random-integer>\n' +
+                    '  protocol                         mqtts\n' +
                     '  private-key                      private.pem.key\n' +
                     '  client-certificate               certificate.pem.crt\n' +
                     '  ca-certificate                   root-CA.crt\n' +
@@ -76,9 +81,10 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
     };
     args = minimist(args, {
     string: ['certificate-dir', 'aws-region', 'private-key', 'client-certificate', 
-             'ca-certificate', 'client-id', 'thing-name', 'configuration-file' ],
-    integer: [ 'reconnect-period-ms', 'test-mode', 'delay-ms' ],
-    boolean: ['help'],
+             'ca-certificate', 'client-id', 'thing-name', 'configuration-file',
+             'host-name', 'protocol' ],
+    integer: [ 'reconnect-period-ms', 'test-mode', 'port', 'delay-ms' ],
+    boolean: ['help','debug'],
     alias: {
       region: ['g', 'aws-region'],
       clientId: ['i', 'client-id'],
@@ -91,18 +97,23 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
       testMode: ['t', 'test-mode'],
       thingName: ['T', 'thing-name'],
       delay: ['d', 'delay-ms'],
-      debug: 'D',
+      Port: ['p', 'port'],
+      Protocol: ['P', 'protocol'],
+      Host: ['H', 'host-name'],
+      Debug: ['D', 'debug'],
       help: 'h'
     },
     default: {
       region: 'us-east-1',
+      protocol: 'mqtts',
       clientId: clientIdDefault,
       privateKey: 'private.pem.key',
       clientCert: 'certificate.pem.crt',
       caCert: 'root-CA.crt',
       testMode: 1,
       reconnectPeriod: 3*1000,     /* milliseconds */
-      delay: 4*1000                /* milliseconds */
+      delay: 4*1000,               /* milliseconds */
+      Debug: false
     },
     unknown: function() {
        console.error('***unrecognized options***'); doHelp(); process.exit(1); 
@@ -193,23 +204,27 @@ module.exports = function( description, args, processFunction, argumentHelp ) {
      }
   }
 
+  if (args.Protocol === 'mqtts')
+  {
 //
-// Client certificate, private key, and CA certificate must all exist.
+// Client certificate, private key, and CA certificate must all exist if
+// connecting via mqtts.
 //
-  if (!fs.existsSync( args.privateKey ))
-  {
-     console.error( '\n' + args.privateKey + ' doesn\'t exist (--help for usage)\n');
-     return;
-  }
-  if (!fs.existsSync( args.clientCert ))
-  {
-     console.error( '\n' + args.clientCert + ' doesn\'t exist (--help for usage)\n');
-     return;
-  }
-  if (!fs.existsSync( args.caCert ))
-  {
-     console.error( '\n' + args.caCert + ' doesn\'t exist (--help for usage)\n');
-     return;
+    if (!fs.existsSync( args.privateKey ))
+    {
+       console.error( '\n' + args.privateKey + ' doesn\'t exist (--help for usage)\n');
+       return;
+    }
+    if (!fs.existsSync( args.clientCert ))
+    {
+       console.error( '\n' + args.clientCert + ' doesn\'t exist (--help for usage)\n');
+       return;
+    }
+    if (!fs.existsSync( args.caCert ))
+    {
+       console.error( '\n' + args.caCert + ' doesn\'t exist (--help for usage)\n');
+       return;
+    }
   }
 
   processFunction( args );

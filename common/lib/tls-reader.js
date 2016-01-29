@@ -14,7 +14,7 @@
  */
 
 //node.js deps
-const fs = require('fs');
+const filesys = require('fs');
 
 //npm deps
 
@@ -55,8 +55,8 @@ module.exports = function(options) {
      }
      else
      {
-        if (fs.existsSync(options.caCert)) {
-           options.ca = fs.readFileSync(options.caCert);
+        if (filesys.existsSync(options.caCert)) {
+           options.ca = filesys.readFileSync(options.caCert);
         }
         else {
            throw new Error(exceptions.INVALID_CA_CERT_OPTION);
@@ -69,8 +69,8 @@ module.exports = function(options) {
      }
      else
      {
-        if (fs.existsSync(options.privateKey)) {
-           options.key = fs.readFileSync(options.privateKey);
+        if (filesys.existsSync(options.privateKey)) {
+           options.key = filesys.readFileSync(options.privateKey);
         }
         else {
            throw new Error(exceptions.INVALID_PRIVATE_KEY_OPTION);
@@ -83,8 +83,8 @@ module.exports = function(options) {
      }
      else
      {
-        if (fs.existsSync(options.clientCert)) {
-           options.cert = fs.readFileSync(options.clientCert);
+        if (filesys.existsSync(options.clientCert)) {
+           options.cert = filesys.readFileSync(options.clientCert);
         }
         else {
            throw new Error(exceptions.INVALID_CLIENT_CERT_OPTION);
@@ -95,20 +95,20 @@ module.exports = function(options) {
   // Parse PEM files.  Options ending in 'Path' must be files
   // and will override options which do not end in 'Path'.
 
-  if (fs.existsSync(options.keyPath)) {
-     options.key = fs.readFileSync(options.keyPath);
+  if (filesys.existsSync(options.keyPath)) {
+     options.key = filesys.readFileSync(options.keyPath);
   }
   else if (!isUndefined(options.keyPath)) {
      throw new Error(exceptions.INVALID_KEY_PATH_OPTION);
   }
-  if (fs.existsSync(options.certPath)) {
-     options.cert = fs.readFileSync(options.certPath);
+  if (filesys.existsSync(options.certPath)) {
+     options.cert = filesys.readFileSync(options.certPath);
   }
   else if (!isUndefined(options.certPath)) {
      throw new Error(exceptions.INVALID_CERT_PATH_OPTION);
   }
-  if (fs.existsSync(options.caPath)) {
-     options.ca = fs.readFileSync(options.caPath);
+  if (filesys.existsSync(options.caPath)) {
+     options.ca = filesys.readFileSync(options.caPath);
   }
   else if (!isUndefined(options.caPath)) {
      throw new Error(exceptions.INVALID_CA_PATH_OPTION);

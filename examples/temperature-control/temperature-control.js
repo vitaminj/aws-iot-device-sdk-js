@@ -157,7 +157,10 @@ const thingShadows = thingShadow({
   caPath: args.caCert,
   clientId: args.clientId,
   region: args.region,
-  reconnectPeriod: args.reconnectPeriod
+  reconnectPeriod: args.reconnectPeriod,
+  protocol: args.Protocol,
+  port: args.Port,
+  host: args.Host
 });
 
 var opClientToken;
@@ -214,16 +217,30 @@ var bar = blessed.listbar({
   commands: {
     'mode': {
       callback: function() {
+        var renderScreen = true;
+
         var enabledStatus=( deviceControlState.enabled===true?'OFF':' ON');
         deviceControlState.enabled=(deviceControlState.enabled===true?false:true);
-        log.log('temperature control '+(deviceControlState.enabled?'enabled':'disabled'));
 
         if (networkEnabled===true)
         {
            opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
+//
+// If we receive null from the update method, that means an operation
+// is still in progress; revert our local state and don't update the UI.
+//
+           if (opClientToken === null)
+           {
+              deviceControlState.enabled=(deviceControlState.enabled===true?false:true);
+              renderScreen = false;
+           }
         }
-        lcd4.setDisplay( enabledStatus );
-        screen.render();
+        if (renderScreen === true)
+        {
+           log.log('temperature control '+(deviceControlState.enabled?'enabled':'disabled'));
+           lcd4.setDisplay( enabledStatus );
+           screen.render();
+        }
       }
     },
     'network': {
@@ -244,7 +261,10 @@ var bar = blessed.listbar({
 // get a 'rejected' status if another entity has updated this thing shadow
 // in the meantime and we will have to re-sync.
 //
-           thingShadows.update( 'TemperatureControl', { state: { desired: deviceControlState } } );
+           if (thingShadows.update( 'TemperatureControl', { state: { desired: deviceControlState } } ) === null)
+           {
+              log.log( 'operation in progress');
+           }
         }
         else
         {
@@ -270,25 +290,54 @@ bar.focus();
 screen.key('up', function( ch, key ) {
 if (deviceControlState.setPoint < 90)
 {
+   var renderScreen = true;
+
    deviceControlState.setPoint++;
-   lcd1.setDisplay(deviceControlState.setPoint+'F');
    if (networkEnabled===true)
    {
       opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
+//
+// If we receive null from the update method, that means an operation
+// is still in progress; revert our local state and don't update the UI.
+//
+      if (opClientToken === null)
+      {
+         deviceControlState.setPoint--;
+         renderScreen = false;
+      }
    }
-   screen.render();
+   if (renderScreen === true)
+   {
+      lcd1.setDisplay(deviceControlState.setPoint+'F');
+      screen.render();
+   }
 }
 });
+
 screen.key('down', function( ch, key ) {
 if (deviceControlState.setPoint > 50)
 {
+   var renderScreen = true;
+
    deviceControlState.setPoint--;
-   lcd1.setDisplay(deviceControlState.setPoint+'F');
    if (networkEnabled===true)
    {
       opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
+//
+// If we receive null from the update method, that means an operation
+// is still in progress; revert our local state and don't update the UI.
+//
+      if (opClientToken === null)
+      {
+         deviceControlState.setPoint++;
+         renderScreen = false;
+      }
    }
-   screen.render();
+   if (renderScreen === true)
+   {
+      lcd1.setDisplay(deviceControlState.setPoint+'F');
+      screen.render();
+   }
 }
 });
 
@@ -314,6 +363,10 @@ thingShadows
 //
     setTimeout( function() {
        opClientToken = thingShadows.get('TemperatureControl');
+       if (opClientToken === null)
+       {
+          log.log('operation in progress');
+       }
     }, 2000 );
     });
 
@@ -340,6 +393,10 @@ thingShadows
 //
     setTimeout( function() {
        opClientToken = thingShadows.update('TemperatureControl', { state: { desired: deviceControlState } });
+       if (opClientToken === null)
+       {
+          log.log('operation in progress');
+       }
     }, 2000 );
   });
 
@@ -372,6 +429,10 @@ thingShadows
          {
             log.log('resync with thing shadow');
             opClientToken = thingShadows.get(thingName);
+            if (opClientToken === null)
+            {
+               log.log('operation in progress');
+            }
          }
       }
       if (statusType === 'accepted')
@@ -432,6 +493,7 @@ thingShadows
 
       setInterval( function() {
          var difference;
+         var currentInteriorTemp = deviceMonitorState.intTemp;
 //
 // If the device is enabled, the internal temperature will move towards
 // the setpoint; otherwise, it will move towards the external temperature.
@@ -466,10 +528,20 @@ thingShadows
          {
             deviceMonitorState.curState = 'stopped';
          }
-         if (networkEnabled===true)
+//
+// Update the thing shadow only if the interior temperature has changed.
+//
+         if ((networkEnabled===true) && 
+             (deviceMonitorState.intTemp !== currentInteriorTemp))
          {
             opClientToken = thingShadows.update('TemperatureStatus', 
                                 { state: { desired: deviceMonitorState } });
+
+//
+// We don't worry about rejected operations here since we do these
+// once per second; if the shadow couldn't be updated due to an operation
+// in progress, it will simply re-attempt it on the next invocation.
+//
          }
       }, 1000 );
    }

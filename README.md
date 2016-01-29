@@ -1,4 +1,4 @@
-# AWS IoT SDK for JavaScript
+# AWS IoT SDK for Node.js
 The aws-iot-device-sdk.js package allows developers to write JavaScript 
 applications which access the AWS IoT Platform; it is intended for use in
 embedded devices which support Node.js, but it can be used in other Node.js 
@@ -8,8 +8,10 @@ environments as well.
 * [Installation](#install)
 * [Examples](#examples)
 * [API Documentation](#api)
+* [Connection Types](#connections)
 * [Example Programs](#programs)
 * [Troubleshooting](#troubleshooting)
+* [Unit Tests](#unittests)
 * [License](#license)
 * [Support](#support)
 
@@ -19,9 +21,9 @@ This document provides instructions on how to install and configure the AWS
 IoT device SDK for Node.js and includes examples demonstrating use of the
 SDK APIs.
 
-### MQTT connection
+### MQTT Connection
 This package is built on top of [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) and provides two classes: 'device'
-and 'thingShadow'.  The 'device' class loosely wraps [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) to provide a
+and 'thingShadow'.  The 'device' class wraps [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) to provide a
 secure connection to the AWS IoT platform and expose the [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) interfaces
 upward via an instance of the mqtt client.
 
@@ -98,14 +100,16 @@ var thingShadows = awsIot.thingShadow({
 });
 
 //
-// Thing shadow state
-//
-var rgbLedLampState = {"state":{"desired":{"red":187,"green":114,"blue":222}}};
-
-//
 // Client token value returned from thingShadows.update() operation
 //
 var clientTokenUpdate;
+
+//
+// Simulated device values
+//
+var rval = 187;
+var gval = 114;
+var bval = 222;
 
 thingShadows.on('connect', function() {
 //
@@ -114,7 +118,7 @@ thingShadows.on('connect', function() {
 //
     thingShadows.register( 'RGBLedLamp' );
 //
-// 2 seconds after registering, update the Thing Shadow named 
+// 5 seconds after registering, update the Thing Shadow named 
 // 'RGBLedLamp' with the latest device state and save the clientToken
 // so that we can correlate it with status or timeout events.
 //
@@ -124,27 +128,58 @@ thingShadows.on('connect', function() {
 // method for more details.
 //
     setTimeout( function() {
+//
+// Thing shadow state
+//
+       var rgbLedLampState = {"state":{"desired":{"red":rval,"green":gval,"blue":bval}}};
+
        clientTokenUpdate = thingShadows.update('RGBLedLamp', rgbLedLampState  );
-       }, 2000 );
+//
+// The update method returns a clientToken; if non-null, this value will
+// be sent in a 'status' event when the operation completes, allowing you
+// to know whether or not the update was successful.  If the update method
+// returns null, it's because another operation is currently in progress and
+// you'll need to wait until it completes (or times out) before updating the 
+// shadow.
+//
+       if (clientTokenUpdate === null)
+       {
+          console.log('update shadow failed, operation still in progress');
+       }
+       }, 5000 );
     });
 
 thingShadows.on('status', 
     function(thingName, stat, clientToken, stateObject) {
        console.log('received '+stat+' on '+thingName+': '+
                    JSON.stringify(stateObject));
+//
+// These events report the status of update(), get(), and delete() 
+// calls.  The clientToken value associated with the event will have
+// the same value which was returned in an earlier call to get(),
+// update(), or delete().  Use status events to keep track of the
+// status of shadow operations.
+//
     });
 
 thingShadows.on('delta', 
     function(thingName, stateObject) {
-       console.log('received delta '+' on '+thingName+': '+
+       console.log('received delta on '+thingName+': '+
                    JSON.stringify(stateObject));
     });
 
 thingShadows.on('timeout',
     function(thingName, clientToken) {
-       console.log('received timeout '+' on '+operation+': '+
-                   clientToken);
+       console.log('received timeout on '+thingName+
+                   ' with token: '+ clientToken);
+//
+// In the event that a shadow operation times out, you'll receive
+// one of these events.  The clientToken value associated with the
+// event will have the same value which was returned in an earlier
+// call to get(), update(), or delete().
+//
     });
+
 ```
 
 <a name="api"></a>
@@ -168,7 +203,7 @@ thingShadows.on('timeout',
 
 Returns an instance of the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) 
 class, configured for a TLS connection with the AWS IoT platform and with 
-arguments as specified in `options`.  The awsIot-specific arguments are as 
+arguments as specified in `options`.  The AWSIoT-specific arguments are as 
 follows:
 
   * `region`: the AWS IoT region you will operate in (default 'us-east-1')
@@ -179,6 +214,7 @@ follows:
   * `clientCert`: same as `certPath`, but can also accept a buffer containing client certificate data
   * `privateKey`: same as `keyPath`, but can also accept a buffer containing private key data
   * `caCert`: same as `caPath`, but can also accept a buffer containing CA certificate data
+  * `protocol`: the connection type, either 'mqtts' (default) or 'wss' (WebSocket/TLS)
 
 All certificates and keys must be in PEM format.
 
@@ -302,7 +338,8 @@ the `clientToken` will be supplied as one of the parameters, allowing the
 application to keep track of the status of each operation.  The caller may
 create their own `clientToken` value; if `stateObject` contains a `clientToken`
 property, that will be used rather than the internally generated value.  Note
-that it should be of atomic type (i.e. numeric or string).
+that it should be of atomic type (i.e. numeric or string).  This function
+returns 'null' if an operation is already in progress.
 
 -------------------------------------------------------
 <a name="get"></a>
@@ -319,7 +356,8 @@ the `clientToken` will be supplied as one of the parameters, allowing the
 application to keep track of the status of each operation.  The caller may
 supply their own `clientToken` value (optional); if supplied, the value of
 `clientToken` will be used rather than the internally generated value.  Note
-that this value should be of atomic type (i.e. numeric or string).
+that this value should be of atomic type (i.e. numeric or string).  This
+function returns 'null' if an operation is already in progress.
 
 -------------------------------------------------------
 <a name="delete"></a>
@@ -336,7 +374,8 @@ the `clientToken` will be supplied as one of the parameters, allowing the
 application to keep track of the status of each operation.  The caller may
 supply their own `clientToken` value (optional); if supplied, the value of
 `clientToken` will be used rather than the internally generated value.  Note
-that this value should be of atomic type (i.e. numeric or string).
+that this value should be of atomic type (i.e. numeric or string).  This
+function returns 'null' if an operation is already in progress.
 
 -------------------------------------------------------
 <a name="publish"></a>
@@ -374,6 +413,18 @@ method on the MQTT connection owned by the `thingShadow` class.  The `force`
 and `callback` parameters are optional and identical in function to the 
 parameters in the [mqtt.Client#end()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#end) method.
 
+<a name="connections"></a>
+## Connection Types
+
+This SDK supports two types of connections to the AWS IoT platform:
+
+* MQTT over TLS with mutual certificate authentication using port 8883
+* MQTT over WebSocket/TLS with SigV4 authentication using port 443
+
+The default connection type is MQTT over TLS with mutual certificate authentication; to
+configure a WebSocket/TLS connection, set the `protocol` option to `wss` when instantiating
+the [awsIot.device()](#device) or [awsIot.thingShadow()](#thingShadow) classes.
+
 <a name="programs"></a>
 ## Example Programs
 
@@ -404,11 +455,34 @@ follows:
 ```sh
 node examples/<EXAMPLE-PROGRAM> -h
 ```
+<a name="websockets"></a>
+### WebSocket Configuration 
+
+The example programs can be configured to use a WebSocket/TLS connection to
+the AWS IoT platform by adding '--protocol=wss' to the command line to
+override the default setting of 'mqtts'.
+
+```sh
+  -P, --protocol=PROTOCOL          connect using PROTOCOL (mqtts|wss)
+```
+
+When using a WebSocket/TLS connection, you'll need to set the following environment
+variables:
+
+```sh
+  export AWS_ACCESS_KEY_ID=[a valid AWS access key ID]
+  export AWS_SECRET_ACCESS_KEY=[a valid AWS secret access key]
+```
+
+The values of `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` must contain valid
+AWS Identity and Access Management (IAM) credentials.  For more information about AWS
+IAM, [visit the AWS IAM home page.](https://aws.amazon.com/iam/)
 
 <a name="certificates"></a>
-### Certificates 
+### Certificate Configuration
 
-The example programs require certificates (created using either the [AWS
+When not configured to use a WebSocket/TLS connection, the example programs 
+require a client certificate and private key (created using either the [AWS
 IoT Console](https://console.aws.amazon.com/iot) or the 
 [AWS IoT CLI](https://aws.amazon.com/cli/)) in order to authenticate with
 AWS IoT.  Each example program uses command line options to specify the
@@ -420,8 +494,8 @@ names and/or locations of certificates as follows:
   -f, --certificate-dir=DIR        look in DIR for certificates
 ```
 
-The --certificate-dir (-f) option will read all certificates from the
-directory specified.  Default certificate names are as follows:
+The --certificate-dir (-f) option will read all certificate and key files from the
+directory specified.  Default certificate/key file names are as follows:
 
 * certificate.pem.crt: your AWS IoT certificate
 * private.pem.key: the private key associated with your AWS IoT certificate
@@ -456,7 +530,7 @@ The configuration file is in JSON format, and may contain the following
 properties:
 
 * host - the host name to connect to
-* port - the port number to use when connecting to the host (8883 for AWS IoT)
+* port - the port number to use when connecting to the host (8883 for AWS IoT with client certificate)
 * clientId - the client ID to use when connecting
 * privateKey - file containing the private key
 * clientCert - file containing the client certificate
@@ -480,7 +554,7 @@ each process performs.  It's easiest to run each process in its own
 terminal window so that you can see the output generated by each.  Note
 that in the following examples, all certificates are located in the
 ~/certs directory and have the default names as specified in the 
-[Certificates section](#certificates).
+[Certificate Configuration section](#certificates).
 
 #### _Terminal Window 1_
 ```sh
@@ -498,19 +572,19 @@ processes which communicate with one another via the AWS IoT platform.
 thing-example.js uses a Thing Shadow to synchronize state between the
 two processes, and the command line option '--test-mode (-t)' is used
 to set which role each process performs.  As with device-example.js, 
-it's best to run each process in its own terminal window.  Note 
-that in the following examples, all certificates are located in the
-~/certs directory and have the default names as specified in the 
-[Certificates section](#certificates).
+it's best to run each process in its own terminal window or on separate
+hosts.  In this example, the example programs are configured to use
+WebSocket/TLS connections to the AWS IoT platform as specified in the
+[WebSocket Configuration](#websockets).
 
 #### _Terminal Window 1_
 ```sh
-node examples/thing-example.js -f ~/certs --test-mode=1
+node examples/thing-example.js -P=wss --test-mode=1
 ```
 
 #### _Terminal Window 2_
 ```sh
-node examples/thing-example.js -f ~/certs --test-mode=2
+node examples/thing-example.js -P=wss --test-mode=2
 ```
 
 ### thing-passthrough-example.js
@@ -523,7 +597,7 @@ is used to set which role each process performs.  As with thing-example.js,
 it's best to run each process in its own terminal window.  Note 
 that in the following examples, all certificates are located in the
 ~/certs directory and have the default names as specified in the 
-[Certificates section](#certificates).
+[Certificate Configuration section](#certificates).
 
 #### _Terminal Window 1_
 ```sh
@@ -561,7 +635,7 @@ Like thing-example.js, temperature-control.js runs in two
 separate terminal windows and is configured via command-line options;
 in the following example, all certificates are located in the ~/certs
 directory and have the default names as specified in the 
-[Certificates section](#certificates).  The process running
+[Certificate Configuration section](#certificates).  The process running
 with '--test-mode=2' simulates an internet-connected temperature control 
 device, and the process running with '--test-mode=1' simulates a mobile
 application which is monitoring/controlling it.  The processes may be
@@ -676,6 +750,18 @@ specify a client ID, the example programs will generate random client IDs,
 but if you are using a [JSON configuration file](#configurationFile), you'll
 need to explictly specify client IDs for both programs using the '-i' command
 line option.
+
+<a name="unittests"></a>
+## Unit Tests
+
+This package includes unit tests which can be run as follows:
+
+```sh
+npm test
+```
+
+Running the unit tests will also generate code coverage data in the 'reports'
+directory.
 
 <a name="license"></a>
 ## License

@@ -1,3 +1,14 @@
+## [1.0.10](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.10) (January 28, 2016)
+
+Features:
+  - Added support for WebSocket connections to AWS IoT
+
+Bugfixes/Improvements
+  - Incorporated github pull requests [#28](https://github.com/aws/aws-iot-device-sdk-js/pull/28) and [#29](https://github.com/aws/aws-iot-device-sdk-js/pull/29)
+  - Fixes for github issues [#30](https://github.com/aws/aws-iot-device-sdk-js/issues/30)
+  - Added unit tests to release
+  - Updated documentation
+
 ## [1.0.7](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.7) (October 30, 2015)
 
 Bugfixes/Improvements:

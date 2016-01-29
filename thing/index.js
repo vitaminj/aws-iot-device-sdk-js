@@ -176,7 +176,7 @@ function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
       }
 //
 // Subscribe/unsubscribe from the topics and perform callback when complete.
-//
+//      
       if (!isUndefined( callback ))
       {
          device[devFunction]( topics, { qos: 0 }, callback );
@@ -276,6 +276,10 @@ function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
          thingShadows[thingName].timeouts[clientToken]);
 
       delete thingShadows[thingName].timeouts[clientToken];
+//
+// Mark this operation as complete.
+//
+      thingShadows[thingName].pending = false;
 
 //
 // Unsubscribe from the 'accepted' and 'rejected' sub-topics unless we are
@@ -352,11 +356,20 @@ function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
         }
       }
    });
+
    this._thingOperation = function( thingName, operation, stateObject )
    {
       var rc = null;
 
       if (thingShadows.hasOwnProperty( thingName )) {
+//
+// Don't allow a new operation if an existing one is still in process.
+//
+         if (thingShadows[thingName].pending === false)  {
+//
+// Starting a new operation
+//
+             thingShadows[thingName].pending = true;
 //
 // If not provided, construct a clientToken from the clientId and a rolling 
 // operation count.  The clientToken is transmitted in any published stateObject 
@@ -364,113 +377,125 @@ function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
 // clientToken values to correlate received responses or timeouts with
 // the original operations.
 //
-         var clientToken;
+            var clientToken;
 
-         if (isUndefined(stateObject.clientToken))
-         {
-            clientToken = deviceOptions.clientId+'-'+operationCount++;
-         }
-         else
-         {
-            clientToken = stateObject.clientToken;
-         }
+            if (isUndefined(stateObject.clientToken))
+            {
+               clientToken = deviceOptions.clientId+'-'+operationCount++;
+            }
+            else
+            {
+               clientToken = stateObject.clientToken;
+            }
 
-         var publishTopic = buildThingShadowTopic( thingName,
-                                                   operation );
+            var publishTopic = buildThingShadowTopic( thingName,
+                                                      operation );
 //
 // Subscribe to the 'accepted' and 'rejected' sub-topics for this get
 // operation and set a timeout beyond which they will be unsubscribed if 
 // no messages have been received for either of them.
 //
-         thingShadows[thingName].timeouts[clientToken] = setTimeout(
-            function( thingName, clientToken ) {
+            thingShadows[thingName].timeouts[clientToken] = setTimeout(
+               function( thingName, clientToken ) {
 //
 // Timed-out.  Unsubscribe from the 'accepted' and 'rejected' sub-topics unless
 // we are persistently subscribing to this thing shadow.
 //
-               if (thingShadows[thingName].persistentSubscribe === false)
-               {
-                   that._handleSubscriptions( thingName,
-                                              [ operation ],
-                                              ['accepted','rejected'],
-                                              'unsubscribe' );
-               }
+                  if (thingShadows[thingName].persistentSubscribe === false)
+                  {
+                      that._handleSubscriptions( thingName,
+                                                 [ operation ],
+                                                 ['accepted','rejected'],
+                                                 'unsubscribe' );
+                  }
+//
+// Mark this operation as complete.
+//
+                  thingShadows[thingName].pending = false;
 //
 // Emit an event for the timeout; the clientToken is included as an argument
 // so that the application can correlate timeout events to the operations
 // they are associated with.
 //
-               that.emit( 'timeout', thingName, clientToken );
+                  that.emit( 'timeout', thingName, clientToken );
 //
 // Delete the timeout handle for this thingName/clientToken combination.
 //
-               delete thingShadows[thingName].timeouts[clientToken];
-            }, operationTimeout,
-               thingName, clientToken );
-
+                  delete thingShadows[thingName].timeouts[clientToken];
+               }, operationTimeout,
+                  thingName, clientToken );
 //
 // Subscribe to the 'accepted' and 'rejected' sub-topics unless we are
 // persistently subscribing, in which case we can publish to the topic immediately
 // since we are already subscribed to all applicable sub-topics.
 //
-         if (thingShadows[thingName].persistentSubscribe === false)
-         {
-            this._handleSubscriptions( thingName,
-                                       [ operation ],
-                                       [ 'accepted', 'rejected' ],
-                                       'subscribe',
-               function(err) {
+            if (thingShadows[thingName].persistentSubscribe === false)
+            {
+               this._handleSubscriptions( thingName,
+                                          [ operation ],
+                                          [ 'accepted', 'rejected' ],
+                                          'subscribe',
+                  function(err) {
 //
 // If 'stateObject' is defined, publish it to the publish topic for this
 // thingName+operation.
 //
-                  if (err !== null)
-                  {
-                     console.warn('failed subscription to accepted/rejected topics');
-                     return;
-                  }
-                  if (!isUndefined(stateObject))
-                  {
+                     if (err !== null)
+                     {
+                        console.warn('failed subscription to accepted/rejected topics');
+                        return;
+                     }
+
+                     if (!isUndefined(stateObject))
+                     {
 //
 // Add the 'version' (if known) and 'clientToken' properties to the stateObject.
 //
-                     if (!isUndefined(thingShadows[thingName].version))
-                     {
-                        stateObject.version=thingShadows[thingName].version;
-                     }
-                     stateObject.clientToken=clientToken;
-
-                     setTimeout( function() {
-                        device.publish( publishTopic, JSON.stringify(stateObject) );
-                        if (!(isUndefined(thingShadows[thingName])) && 
-                             thingShadows[thingName].debug === true)
+                        if (!isUndefined(thingShadows[thingName].version))
                         {
-                           console.log('publishing \''+JSON.stringify(stateObject)+
-                                       ' on \''+publishTopic+'\'');
+                           stateObject.version=thingShadows[thingName].version;
                         }
-                     }, postSubscribeTimeout );
-                  }
-               });
+                        stateObject.clientToken=clientToken;
+   
+                        setTimeout( function() {
+                           device.publish( publishTopic, JSON.stringify(stateObject) );
+                           if (!(isUndefined(thingShadows[thingName])) && 
+                                thingShadows[thingName].debug === true)
+                           {
+                              console.log('publishing \''+JSON.stringify(stateObject)+
+                                          ' on \''+publishTopic+'\'');
+                           }
+                        }, postSubscribeTimeout );
+                     }
+                  });
+            }
+            else
+            {
+//
+// Add the 'version' (if known) and 'clientToken' properties to the stateObject.
+//
+               if (!isUndefined(thingShadows[thingName].version))
+               {
+                  stateObject.version=thingShadows[thingName].version;
+               }
+               stateObject.clientToken=clientToken;
+   
+               device.publish( publishTopic, JSON.stringify(stateObject) );
+               if (thingShadows[thingName].debug === true)
+               {
+                  console.log('publishing \''+JSON.stringify(stateObject)+
+                              ' on \''+publishTopic+'\'');
+               }
+            }
+            rc = clientToken;       // return the clientToken to the caller
          }
          else
          {
-//
-// Add the 'version' (if known) and 'clientToken' properties to the stateObject.
-//
-            if (!isUndefined(thingShadows[thingName].version))
+            if (deviceOptions.debug === true)
             {
-               stateObject.version=thingShadows[thingName].version;
-            }
-            stateObject.clientToken=clientToken;
-
-            device.publish( publishTopic, JSON.stringify(stateObject) );
-            if (thingShadows[thingName].debug === true)
-            {
-               console.log('publishing \''+JSON.stringify(stateObject)+
-                           ' on \''+publishTopic+'\'');
+               console.error(operation+' still in progress on thing: ', thingName);
             }
          }
-         rc = clientToken;       // return the clientToken to the caller
       }
       else
       {
@@ -493,7 +518,8 @@ function ThingShadowsClient( deviceOptions, thingShadowOptions ) {
          thingShadows[thingName] = {timeouts: { },
                                     persistentSubscribe: true,
                                     debug: false,
-                                    discardStale: true };
+                                    discardStale: true,
+                                    pending: false };
 
          if (!isUndefined( options ))
          {
