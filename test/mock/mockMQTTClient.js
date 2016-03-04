@@ -1,10 +1,23 @@
 const util = require('util');
 const EventEmitter = require('events');
+const isUndefined = require('../../common/lib/is-undefined.js');
 
-function mockMQTTClient() {
+function mockMQTTClient( wrapper, options ) {
+
+        var that = this;
+        this.options = { 'reconnectPeriod':0 };
+
 	// Record list indicating whether the corresponding method is called
 	this.commandCalled = {'publish':0, 'subscribe':0, 'unsubscribe':0, 'end':0, 'handleMessage':0};
 	this.lastPublishedMessage = 'Empty'; // Keep track of the last published message
+        this.subscriptions = new Array;
+        this.subscriptions.length = 0;
+        this.publishes = new Array;    // for all topics
+        this.publishes.length = 0;
+        this.subscribeQosValues = new Array;
+        this.subscribeQosValues.length = 0;
+        this.publishQosValues = new Array;
+        this.publishQosValues.length = 0;
 
 	// Reinit the record list
 	this.reInitCommandCalled = function() {
@@ -13,6 +26,23 @@ function mockMQTTClient() {
 		this.commandCalled['unsubscribe'] = 0;
 		this.commandCalled['end'] = 0;
 		this.commandCalled['handleMessage'] = 0;
+                
+                var topic = this.subscriptions.shift();
+                while (!isUndefined( topic )) {
+                   topic = this.subscriptions.shift();
+                }
+                var message = this.publishes.shift();
+                while (!isUndefined( message )) {
+                   message = this.publishes.shift();
+                }
+                var qos = this.subscribeQosValues.shift();
+                while (!isUndefined( qos )) {
+                   qos = this.subscribeQosValues.shift();
+                }
+                var qos = this.publishQosValues.shift();
+                while (!isUndefined( qos )) {
+                   qos = this.publishQosValues.shift();
+                }
 	};
 
 	// Reset publishedMessage
@@ -26,12 +56,32 @@ function mockMQTTClient() {
 		callback = callback || '';
 		this.lastPublishedMessage = message;
 		this.commandCalled['publish'] += 1;
+                this.publishes.push( message );
+
+                if (!isUndefined( options.qos )) {
+                   this.publishQosValues.push( options.qos );
+                }
     };
 
     this.subscribe = function(topic, options, callback) {
 		options = options || '';
 		callback = callback || '';
 		this.commandCalled['subscribe'] += 1;
+
+                if ( Object.prototype.toString.call(topic) === '[object Array]' ) {
+                   topic.forEach( function( item, index, array ) {
+                      that.subscriptions.push( item );
+                      if (!isUndefined( options.qos )) {
+                         that.subscribeQosValues.push( options.qos );
+                      }
+                   });
+                }
+                else {
+                   this.subscriptions.push( topic );
+                      if (!isUndefined( options.qos )) {
+                         that.subscribeQosValues.push( options.qos );
+                      }
+                }
 		if(callback !== '') {
 			callback(null); // call callback
 		}
@@ -52,7 +102,7 @@ function mockMQTTClient() {
     this.handleMessage = function(packet, callback) {
     	this.commandCalled['handleMessage'] += 1;
     };
-    
+
     EventEmitter.call(this);
 }
 

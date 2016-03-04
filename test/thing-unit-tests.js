@@ -20,23 +20,30 @@
 //app deps
 var assert = require('assert');
 var sinon = require('sinon');
-var mqtt = require('mqtt');
 var device = require('../device');
 var mockMQTTClient = require('./mock/mockMQTTClient');
 
+
 describe( "thing shadow class unit tests", function() {
-    var thingShadow = require('..').thingShadow;
+
     var mockMQTTClientObject;
+    var mqttSave;
 
-    // Mock the connect API for mqtt.js
-    var fakeConnect = sinon.spy(function(wrapper,options) {
-        mockMQTTClientObject = new mockMQTTClient(); // return the mocking object
-        mockMQTTClientObject.reInitCommandCalled();
-        mockMQTTClientObject.resetPublishedMessage();
-        return mockMQTTClientObject;
+    beforeEach( function () {
+        // Mock the connect API for mqtt.js
+        var fakeConnect = function(options) {
+            mockMQTTClientObject = new mockMQTTClient(); // return the mocking object
+            mockMQTTClientObject.reInitCommandCalled();
+            mockMQTTClientObject.resetPublishedMessage();
+            return mockMQTTClientObject;
+        };
+
+        mqttSave = sinon.stub(device, 'DeviceClient', fakeConnect);
     });
-
-    sinon.stub(mqtt, 'MqttClient', fakeConnect);
+    afterEach( function () {
+        mqttSave.restore();
+    });
+    var thingShadow = require('..').thingShadow;
 
   // Test cases begin
   describe( "register a thing shadow name", function() {
@@ -844,7 +851,7 @@ describe( "thing shadow class unit tests", function() {
             region:'us-east-1'
           });
           // Register a thing
-          thingShadows.register('testShadow4', {persistentSubscribe:false}); // Unsub once there is a feedback
+          thingShadows.register('testShadow4', {persistentSubscribe:false, enableVersioning: true}); // Unsub once there is a feedback
           // Generate fake payload
           myPayload = '{"state":{"desired":{"color":"RED"},"reported":{"color":"BLUE"}},"clientToken":"CoolToken1"}';
           myStateObject = JSON.parse(myPayload);
@@ -883,7 +890,6 @@ describe( "thing shadow class unit tests", function() {
             region:'us-east-1',
           }, {
             operationTimeout:1000, // Set operation timeout to be 1 sec
-            postSubscribeTimeout:3000 // Set post-subscribe timeout to be 3 sec
           } );
           // Register callback
           thingShadows.on('timeout', fakeCallback);
@@ -1047,7 +1053,7 @@ describe( "thing shadow class unit tests", function() {
             region:'us-east-1'
           } );
           // Register a thing
-          thingShadows.register('testShadow4', { debug: true, discardStale: true } );
+          thingShadows.register('testShadow4', { debug: true, discardStale: true, enableVersioning: true } );
           // Generate fake payload
           myPayload = '{"state":{"desired":{"color":"RED"},"reported":{"color":"BLUE"}},"clientToken":"CoolToken1"}';
           myStateObject = JSON.parse(myPayload);
@@ -1057,6 +1063,38 @@ describe( "thing shadow class unit tests", function() {
           // Update again
           thingShadows.update('testShadow4', myStateObject);
           assert.equal(mockMQTTClientObject.lastPublishedMessage, '{"state":{"desired":{"color":"RED"},"reported":{"color":"BLUE"}},"clientToken":"CoolToken1","version":7}');
+          // Unregister it
+          thingShadows.unregister('testShadow4');
+      });
+    });
+//
+// Verify that version is not inserted in the outbound payload for shadow update when
+// versioning is disabled.
+//
+    describe("Update when local version is available (persistent subscribe)", function() {
+      it("should not include the local version into the payload", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+          mockMQTTClientObject.resetPublishedMessage();
+          // Init thingShadowClient
+          var thingShadows = thingShadow( {
+            keyPath:'test/data/private.pem.key',
+            certPath:'test/data/certificate.pem.crt',
+            caPath:'test/data/root-CA.crt',
+            clientId:'dummy-client-1',
+            region:'us-east-1'
+          } );
+          // Register a thing
+          thingShadows.register('testShadow4', { debug: true, discardStale: true, enableVersioning: false } );
+          // Generate fake payload
+          myPayload = '{"state":{"desired":{"color":"RED"},"reported":{"color":"BLUE"}},"clientToken":"CoolToken1"}';
+          myStateObject = JSON.parse(myPayload);
+          // Update
+          thingShadows.update('testShadow4', myStateObject);
+          mockMQTTClientObject.emit('message', '$aws/things/testShadow4/shadow/update/accepted', '{"clientToken":"CoolToken1","version":8}'); // sync local version
+          // Update again
+          thingShadows.update('testShadow4', myStateObject);
+          assert.equal(mockMQTTClientObject.lastPublishedMessage, '{"state":{"desired":{"color":"RED"},"reported":{"color":"BLUE"}},"clientToken":"CoolToken1"}');
           // Unregister it
           thingShadows.unregister('testShadow4');
       });
@@ -1221,6 +1259,192 @@ describe( "thing shadow class unit tests", function() {
           assert.equal(clientToken, null);
       });
     });
+//
+// Verify that events from the mqtt client are propagated upwards
+//
+    describe("Ensure that events are propagated upwards", function() {
+       it("should emit the corresponding events", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+          // Init thingShadowClient
+          var thingShadows = thingShadow( {
+            keyPath:'test/data/private.pem.key',
+            certPath:'test/data/certificate.pem.crt',
+            caPath:'test/data/root-CA.crt',
+            clientId:'dummy-client-1',
+            region:'us-east-1'
+          } );
+          // Register a thing
+          thingShadows.register('testShadow3');
+          // Register a fake callback
+          var fakeCallback1 = sinon.spy();
+          var fakeCallback2 = sinon.spy();
+          var fakeCallback3 = sinon.spy();
+          var fakeCallback4 = sinon.spy();
+          var fakeCallback5 = sinon.spy();
+          thingShadows.on('connect', fakeCallback1);
+          thingShadows.on('close', fakeCallback2);
+          thingShadows.on('reconnect', fakeCallback3);
+          thingShadows.on('offline', fakeCallback4);
+          thingShadows.on('error', fakeCallback5);
+          // Now emit messages
+          mockMQTTClientObject.emit('connect');
+          mockMQTTClientObject.emit('close');
+          mockMQTTClientObject.emit('reconnect');
+          mockMQTTClientObject.emit('offline');
+          mockMQTTClientObject.emit('error');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+        });
+    });
+//
+// Verify that foreign state changes (update|delete accepted with no known client token)
+// are reported via 'foreignStateChange' events.
+//
+    describe("Test handling of accepted state updates by foreign clients", function() {
+      it("should not call status callback but it should call foreignStateChange callback", function() {
+          // Faking callback
+          fakeCallback = sinon.spy();
+          fakeCallback2 = sinon.spy();
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+          mockMQTTClientObject.resetPublishedMessage();
+          // Init thingShadowClient
+          var thingShadows = thingShadow( {
+            keyPath:'test/data/private.pem.key',
+            certPath:'test/data/certificate.pem.crt',
+            caPath:'test/data/root-CA.crt',
+            clientId:'dummy-client-1',
+            region:'us-east-1'
+          } );
+          // Register fake callbacks
+          thingShadows.on('status', fakeCallback);
+          thingShadows.on('foreignStateChange', fakeCallback2);
+          // Register a thing
+          thingShadows.register('testShadow3');
+          // Get
+          mockMQTTClientObject.emit('message', '$aws/things/testShadow3/shadow/update/accepted', '{"stateVar":"value111", "clientToken":"Unknown1", "version":2}'); // unknown token
+          sinon.assert.notCalled(fakeCallback);   // Should never trigger the callback
+          sinon.assert.calledOnce(fakeCallback2); // Should be triggered
+          assert.equal(fakeCallback2.getCalls()[0].args[0],'testShadow3');
+          assert.equal(fakeCallback2.getCalls()[0].args[1],'update');
+          assert.deepEqual(fakeCallback2.getCalls()[0].args[2],{stateVar:'value111'});
+          mockMQTTClientObject.emit('message', '$aws/things/testShadow3/shadow/delete/accepted', '{ "version":1, "timestamp":1456254966, "clientToken": "unknownClienToken" }');
+          sinon.assert.notCalled(fakeCallback);   // Should never trigger the callback
+          sinon.assert.calledTwice(fakeCallback2); // Should be triggered
+          assert.equal(fakeCallback2.getCalls()[1].args[0],'testShadow3');
+          assert.equal(fakeCallback2.getCalls()[1].args[1],'delete');
+          assert.deepEqual(fakeCallback2.getCalls()[1].args[2],{'timestamp':1456254966});
+          mockMQTTClientObject.emit('message', '$aws/things/testShadow3/shadow/get/accepted', '{ "state": { "desired": { "value": 1 }}, "version":1, "timestamp":1456254966, "clientToken": "unknownClienToken" }');
+          sinon.assert.notCalled(fakeCallback);   // Should never trigger the callback
+          sinon.assert.calledTwice(fakeCallback2); // Should never trigger the callback
+          // Unregister it
+          thingShadows.unregister('testShadow3');
+      });
+    });
+//
+// Verify that shadow operations are performed using the correct qos values
+//
+    describe("Verify that MQTT operations use the correct shadow qos values", function() {
+      var clock;
 
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+      it("should subscribe and publish at the configured qos", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+          mockMQTTClientObject.resetPublishedMessage();
+          var operationTimeout = 15000;
+          // Init thingShadowClient
+          var thingShadows = thingShadow( {
+            keyPath:'test/data/private.pem.key',
+            certPath:'test/data/certificate.pem.crt',
+            caPath:'test/data/root-CA.crt',
+            clientId:'dummy-client-1',
+            region:'us-east-1',
+            operationTimeout: operationTimeout
+          } );
+          // Register a fake callback
+          var fakeCallback = sinon.spy();
+          // Register a thing
+          thingShadows.register('testShadow1');
+          thingShadows.on('timeout', fakeCallback );
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), undefined);
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/update/delta');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/update/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/update/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/get/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/get/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/delete/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow1/shadow/delete/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), undefined);
+          //
+          // Now check that publishes use the right qos.
+          //
+          thingShadows.update('testShadow1', { "state": "value" } );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          sinon.assert.notCalled(fakeCallback);
+          clock.tick( operationTimeout );
+          sinon.assert.calledOnce(fakeCallback);
+          thingShadows.get('testShadow1' );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          sinon.assert.calledOnce(fakeCallback);
+          clock.tick( operationTimeout );
+          sinon.assert.calledTwice(fakeCallback);
+          thingShadows.delete('testShadow1' );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 0);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          sinon.assert.calledTwice(fakeCallback);
+          clock.tick( operationTimeout );
+          sinon.assert.calledThrice(fakeCallback);
+          thingShadows.unregister('testShadow1');
+          thingShadows.register('testShadow2', { qos: 1 });
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.subscribeQosValues.shift(), undefined);
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/update/delta');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/update/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/update/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/get/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/get/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/delete/accepted');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), '$aws/things/testShadow2/shadow/delete/rejected');
+          assert.equal( mockMQTTClientObject.subscriptions.shift(), undefined);
+          //
+          // Now check that publishes use the right qos.
+          //
+          thingShadows.update('testShadow2', { "state": "value" } );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          clock.tick( operationTimeout );
+          thingShadows.get('testShadow2' );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          clock.tick( operationTimeout );
+          thingShadows.delete('testShadow2' );
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), 1);
+          assert.equal( mockMQTTClientObject.publishQosValues.shift(), undefined);
+          clock.tick( operationTimeout );
+          thingShadows.unregister('testShadow2');
+      });
+    });
 });
 

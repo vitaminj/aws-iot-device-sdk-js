@@ -1,3 +1,17 @@
+/*
+ * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  http://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 /*jshint node:true*/
 'use strict';
 
@@ -6,7 +20,8 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     mocha = require('gulp-mocha'),
     cover = require('gulp-coverage'),
-    jscs = require('gulp-jscs');
+    jscs = require('gulp-jscs'),
+    beautify = require('gulp-beautify');
 
 gulp.task('default', ['test']);
 
@@ -37,4 +52,15 @@ gulp.task('jshint', function() {
     .pipe(jshint.reporter('jshint-stylish', {verbose: true}))
     .pipe(jshint.reporter('fail'))
     .pipe(jscs());
+});
+
+gulp.task('beautify', function() {
+  console.log('Beautifying source with indent level 3');
+  return gulp
+    .src(['common/lib/*.js','examples/**/*.js', 'device/**/*.js','thing/*.js','index.js', '!node_modules/**/*.js', '!examples/**/node_modules/**/*.js'])
+    .pipe(beautify({'indent_size':3, 'indent_char': ' ', 'end_with_newline': true}))
+//
+// Replace the files in-place with the beautified versions.
+//
+    .pipe(gulp.dest( function(vinylFile) { console.log('Beautifying \''+vinylFile.path+'\'...'); return vinylFile.base; }));
 });

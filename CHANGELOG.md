@@ -1,3 +1,18 @@
+## [1.0.11](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.11) (March 4, 2016)
+
+Features:
+  - Configurable exponential backoff retries after connection loss
+  - Configurable offline publish message queueing
+  - Added option for automatic re-subscription after reconnect
+  - Added shadow option for versioning disable
+  - Added session token support
+
+Bugfixes/Improvements
+  - Incorporated github pull requests [#33](https://github.com/aws/aws-iot-device-sdk-js/pull/33), [#34](https://github.com/aws/aws-iot-device-sdk-js/pull/34), and [#39](https://github.com/aws/aws-iot-device-sdk-js/pull/39)
+  - Fixes for github issue [#36](https://github.com/aws/aws-iot-device-sdk-js/issues/36)
+  - Updated unit tests
+  - Updated documentation
+
 ## [1.0.10](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.10) (January 28, 2016)
 
 Features:

@@ -24,8 +24,7 @@ SDK APIs.
 ### MQTT Connection
 This package is built on top of [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) and provides two classes: 'device'
 and 'thingShadow'.  The 'device' class wraps [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) to provide a
-secure connection to the AWS IoT platform and expose the [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) interfaces
-upward via an instance of the mqtt client.
+secure connection to the AWS IoT platform and expose the [mqtt.js](https://github.com/mqttjs/MQTT.js/blob/master/README.md) interfaces upward.  It provides features to simplify handling of intermittent connections, including progressive backoff retries, automatic re-subscription upon connection, and queued offline publishing with configurable drain rate.
 
 ### Thing Shadows
 The 'thingShadow' class implements additional functionality for accessing Thing Shadows via the AWS IoT
@@ -63,12 +62,20 @@ npm install
 ```js
 var awsIot = require('aws-iot-device-sdk');
 
+//
+// Replace the values of '<YourUniqueClientIdentifier>' and '<YourAWSRegion>'
+// with a unique client identifier and the AWS region you created your
+// certificate in (e.g. 'us-east-1').  NOTE: client identifiers must be
+// unique within your AWS account; if a client attempts to connect with a
+// client identifier which is already in use, the existing connection will
+// be terminated.
+//
 var device = awsIot.device({
-   keyPath: '~/awsCerts/private.pem.key',
-  certPath: '~/awsCerts/certificate.pem.crt',
-    caPath: '~/awsCerts/root-CA.crt',
-  clientId: 'myAwsClientId',
-    region: 'us-east-1'
+   keyPath: <YourPrivateKeyPath>,
+  certPath: <YourCertificatePath>,
+    caPath: <YourRootCACertificatePath>,
+  clientId: <YourUniqueClientIdentifier>,
+    region: <YourAWSRegion> 
 });
 
 //
@@ -91,12 +98,20 @@ device
 ```js
 var awsIot = require('aws-iot-device-sdk');
 
+//
+// Replace the values of '<YourUniqueClientIdentifier>' and '<YourAWSRegion>'
+// with a unique client identifier and the AWS region you created your
+// certificate in (e.g. 'us-east-1').  NOTE: client identifiers must be
+// unique within your AWS account; if a client attempts to connect with a
+// client identifier which is already in use, the existing connection will
+// be terminated.
+//
 var thingShadows = awsIot.thingShadow({
-   keyPath: '~/awsCerts/private.pem.key',
-  certPath: '~/awsCerts/certificate.pem.crt',
-    caPath: '~/awsCerts/root-CA.crt',
-  clientId: 'myAwsClientId',
-    region: 'us-east-1'
+   keyPath: <YourPrivateKeyPath>,
+  certPath: <YourCertificatePath>,
+    caPath: <YourRootCACertificatePath>,
+  clientId: <YourUniqueClientIdentifier>,
+    region: <YourAWSRegion>
 });
 
 //
@@ -201,7 +216,7 @@ thingShadows.on('timeout',
 <a name="device"></a>
 ### awsIot.device(options)
 
-Returns an instance of the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) 
+Returns a wrapper for the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) 
 class, configured for a TLS connection with the AWS IoT platform and with 
 arguments as specified in `options`.  The AWSIoT-specific arguments are as 
 follows:
@@ -215,6 +230,14 @@ follows:
   * `privateKey`: same as `keyPath`, but can also accept a buffer containing private key data
   * `caCert`: same as `caPath`, but can also accept a buffer containing CA certificate data
   * `protocol`: the connection type, either 'mqtts' (default) or 'wss' (WebSocket/TLS)
+  * `autoResubscribe`: set to 'true' to automatically re-subscribe to topics after reconnection (default 'true')
+  * `offlineQueueing`: set to 'true' to automatically queue published messages while offline (default 'true')
+  * `offlineQueueMaxSize`: enforce a maximum size for the offline message queue (default 0, e.g. no maximum)
+  * `offlineQueueDropBehavior`: set to 'oldest' or 'newest' to define drop behavior on a full queue when offlineQueueMaxSize > 0
+  * `drainTimeMs`: the minimum time in milliseconds between publishes when draining after reconnection (default 250)
+  * `baseReconnectTimeMs`: the base reconnection time in milliseconds (default 1000)
+  * `maximumReconnectTimeMs`: the maximum reconnection time in milliseconds (default 128000)
+  * `minimumConnectionTimeMs`: the minimum time in milliseconds that a connection must be maintained in order to be considered stable (default 20000)
 
 All certificates and keys must be in PEM format.
 
@@ -233,8 +256,7 @@ functionality to operate on Thing Shadows via the AWS IoT API.  The
 arguments in `options` include all those in the [device class](#device), with 
 the addition of the following arguments specific to the `thingShadow` class:
 
-* `operationTimeout`: the timeout for thing operations (default 30 seconds)
-* `postSubscribeTimeout`: the time to wait after subscribing to an operation's sub-topics prior to publishing on the operation's topic (default 2.2 seconds)
+* `operationTimeout`: the timeout for thing operations (default 10 seconds)
 
 Supports all events emitted by the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) class; however, the semantics for the 
 `message` event are slightly different and additional events are available
@@ -270,6 +292,20 @@ Emitted when a delta has been received for a registered Thing Shadow.
 * `thingName` name of the Thing Shadow that has received a delta
 * `stateObject` the stateObject returned for the operation
 
+### Event `'foreignStateChange'`
+
+`function(thingName, operation, stateObject) {}`
+
+Emitted when a different client's update or delete operation is accepted on
+the shadow.
+
+* `thingName` name of the Thing Shadow for which the operation has completed
+* `operation` operation performed by the foreign client `update|delete`
+* `stateObject` the stateObject returned for the operation
+
+This event allows an application to be aware of successful update or
+delete operations performed by different clients.
+
 ### Event `'timeout'`
 
 `function(thingName, clientToken) {}`
@@ -294,25 +330,26 @@ can contain the following arguments to modify how this Thing Shadow is processed
 * `ignoreDeltas`: set to `true` to not subscribe to the `delta` sub-topic for this Thing Shadow; used in cases where the application is not interested in changes (e.g. update only.) (default `false`)
 * `persistentSubscribe`: set to `false` to unsubscribe from all operation sub-topics while not performing an operation (default `true`)
 * `discardStale`: set to `false` to allow receiving messages with old version numbers (default `true`)
+* `enableVersioning`: set to `true` to send version numbers with shadow updates (default `true`)
 
 The `persistentSubscribe` argument allows an application to get faster operation
 responses at the expense of potentially receiving more irrelevant response
 traffic (i.e., response traffic for other clients who have registered interest
-in the same Thing Shadow).  When `persistentSubscribe` is set to `true` (the default),
-`postSubscribeTimeout` is forced to 0 and the `thingShadow` class will publish
-immediately on any update, get, or delete operation for this registered Thing Shadow.
-When set to `false`, operation sub-topics are only subscribed to during the scope
-of that operation; note that in this mode, update, get, and delete operations will 
-be much slower; however, the application will be less likely to receive irrelevant
-response traffic.
-
-*Note that when `persistentSubscribe` is set to `true` (the default), you must wait the `postSubscribeTimeout` (default 2.2 seconds) between registering interest in the Thing Shadow and performing the first update to it.  After this time interval has expired, you can update the Thing Shadow without waiting.*
+in the same Thing Shadow).  When `persistentSubscribe` is set to `false`, operation
+sub-topics are only subscribed to during the scope of that operation;
+note that in this mode, update, get, and delete operations will be much slower;
+however, the application will be less likely to receive irrelevant response traffic.
 
 The `discardStale` argument allows applications to receive messages which have
 obsolete version numbers.  This can happen when messages are received out-of-order;
 applications which set this argument to `false` should use other methods to
 determine how to treat the data (e.g. use a time stamp property to know how old/stale
 it is).
+
+If `enableVersioning` is set to true, version numbers will be sent with each operation.
+AWS IoT maintains version numbers for each shadow, and will reject operations which 
+contain the incorrect version; in applications where multiple clients update the same
+shadow, clients can use versioning to avoid overwriting each other's changes.
 
 -------------------------------------------------------
 <a name="unregister"></a>
@@ -455,6 +492,9 @@ follows:
 ```sh
 node examples/<EXAMPLE-PROGRAM> -h
 ```
+**NOTE:**  If you didn't create your certificate in the default region ('us-east-1'), you'll
+need to specify the region (e.g., 'us-west-2') that you created your certificate in.  When
+using the example programs, this can be done with the '-g' command line option.
 <a name="websockets"></a>
 ### WebSocket Configuration 
 

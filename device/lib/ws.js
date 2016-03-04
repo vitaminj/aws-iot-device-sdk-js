@@ -20,8 +20,10 @@ const websocket = require('websocket-stream');
 
 //app deps
 
-function buildBuilder (client, opts) {
-  return websocket(opts.url, { protocol: 'mqttv3.1' } );
+function buildBuilder(client, opts) {
+   return websocket(opts.url, {
+      protocol: 'mqttv3.1'
+   });
 }
 
 module.exports = buildBuilder;

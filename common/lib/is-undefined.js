@@ -28,5 +28,5 @@
  * @access public
  */
 module.exports = function(value) {
-  return typeof value === 'undefined' || typeof value === null;
+   return typeof value === 'undefined' || typeof value === null;
 };

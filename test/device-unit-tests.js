@@ -19,23 +19,46 @@ const filesys = require('fs');
 
 //app deps
 var rewire = require('rewire');
+var sinon = require('sinon');
 var assert = require('assert');
+var mqtt = require('mqtt');
 var myTls = rewire('../device/lib/tls');
 var mockTls = require('./mock/mockTls');
+var mockMQTTClient = require('./mock/mockMQTTClient');
 
 describe( "device class unit tests", function() {
     var deviceModule = require('../').device; 
+
+    var mockMQTTClientObject;
+    var fakeConnect;
+    var mqttSave;
+    var mockTlsRevert;
+    var mockMqttRevert;
+
     var mockTlsObject = new mockTls();
     var mockMqttObject = new mockTls.mqtt();
 
-    mockTlsObject.reInitCommandCalled();
-    mockMqttObject.reInitCommandCalled();
-    
+    beforeEach( function () {
 
-    before(function() {
-       myTls.__set__("tls", mockTlsObject);
-       myTls.__set__("mqtt", mockMqttObject);
-       });
+        // Mock the connect API for mqtt.js
+        fakeConnect = function(wrapper,options) {
+            mockMQTTClientObject = new mockMQTTClient(); // return the mocking object
+            mockMQTTClientObject.reInitCommandCalled();
+            mockMQTTClientObject.resetPublishedMessage();
+            return mockMQTTClientObject;
+        };
+
+        mqttSave = sinon.stub(mqtt, 'MqttClient', fakeConnect);
+
+        mockTlsRevert = myTls.__set__("tls", mockTlsObject);
+        mockMqttRevert = myTls.__set__("mqtt", mockMqttObject);
+    });
+    afterEach( function () {
+        mqttSave.restore();
+        mockTlsRevert();
+        mockMqttRevert();
+    });
+
     describe("TLS handler calls the correct functions", function() {
       it("calls the correct functions", function() {
             mockTlsObject.reInitCommandCalled();
@@ -46,6 +69,7 @@ describe( "device class unit tests", function() {
             assert.equal(mockMqttObject.commandCalled['emit'], 1);
       })
     });
+
    describe( "device is instantiated with empty parameters", function() {
 //
 // Verify that the device module throws an exception when all
@@ -66,7 +90,7 @@ describe( "device class unit tests", function() {
       it("throws an exception", function() { 
          assert.throws( function( err ) { 
             var device = deviceModule( { 
-               certPath:'test/data/certificate.pem.crt', 
+               certPath:'test/data/certificate.pem.crt',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
                region:'us-east-1'
@@ -363,6 +387,7 @@ describe( "device class unit tests", function() {
             ); 
       });
    });
+
    describe( "device throws an exception if using websocket protocol without IAM credentials", function() {
 //
 // Verify that the device module will not throw an exception when correctly
@@ -406,33 +431,967 @@ describe( "device class unit tests", function() {
 // Verify that the device module will not throw an exception when correctly
 // configured for websocket operation.
 //
-      it("does not throw an exception", function() { 
+      it("does not throw an exception", function() {
 
-         assert.doesNotThrow( function( err ) { 
-            var url = deviceModule.prepareWebsocketUrl( { 
-               region:'us-east-1',
-               protocol: 'wss',
-               debug: true,
-               port: 8194
-               }, 'not a valid access key', 'not a valid secret access key' );
+         assert.doesNotThrow( function( err ) {
+
+            deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key',
+                                        'not a valid secret access key' );
             }, function(err) { console.log('\t['+err+']'); return true;}
-            ); 
+            );
       });
    });
-   describe( "device throws an exception if using an unknown protocol", function() {
+   describe( "device doesn't accept invalid timing parameters: baseReconnectTimeMs<1", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:-1
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device doesn't accept invalid timing parameters: minimumConnectionTimeMs<baseReconnectTimeMs", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:500
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device doesn't accept invalid timing parameters: maximumReconnectTimeMs<baseReconnectTimeMs", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:500
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device accepts valid timing parameters", function() {
+      it("does not throw an exception", function() {
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:5000
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device handles reconnect timing correctly", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+      it ("sets the reconnect period appropriately", function() {
+         assert.doesNotThrow( function( err ) {
+//
+// Constants reconnection quiet time constants used in this test.
+//
+            const baseReconnectTimeMs     = 1000;
+            const minimumConnectionTimeMs = 2500;
+            const maximumReconnectTimeMs  = 128000;
+
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:baseReconnectTimeMs,
+               minimumConnectionTimeMs:minimumConnectionTimeMs,
+               maximumReconnectTimeMs:maximumReconnectTimeMs
+               } );
+//
+// Check reconnection timing and progression to maximum.
+//
+            mockMQTTClientObject.emit('connect');
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+
+            for (i = 0, currentReconnectTimeMs = baseReconnectTimeMs*2; 
+                 i < 7; 
+                 i++, currentReconnectTimeMs*=2)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            currentReconnectTimeMs/=2;
+            for (i = 0; i < 4; i++)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+//
+// Check that an unstable connection doesn't reset the reconnection progression
+// timing.
+//
+            mockMQTTClientObject.emit('connect');
+            clock.tick( minimumConnectionTimeMs-1 );
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+            clock.tick( minimumConnectionTimeMs );  // make sure timer was cleared
+            mockMQTTClientObject.emit('reconnect');
+            assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+//
+// Check that a stable connection resets the reconnection progression timing.
+//
+            mockMQTTClientObject.emit('connect');
+            clock.tick( minimumConnectionTimeMs+1 );
+            assert.equal(mockMQTTClientObject.options.reconnectPeriod, baseReconnectTimeMs);
+//
+// And check that it progresses correctly again...
+//
+            mockMQTTClientObject.emit('close');
+
+            mockMQTTClientObject.emit('connect');
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+            for (i = 0, currentReconnectTimeMs = baseReconnectTimeMs*2; 
+                 i < 7; 
+                 i++, currentReconnectTimeMs*=2)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            currentReconnectTimeMs/=2;
+            for (i = 0; i < 4; i++)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            }, function(err) { console.log('\t['+err+']'); return true;}
+          );
+      });
+   });
+//
+// Verify that events from the mqtt client are propagated upwards
+//
+    describe("Ensure that events are propagated upwards", function() {
+       it("should emit the corresponding events", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:128000
+            } );
+          // Register fake callbacks
+          var fakeCallback1 = sinon.spy();
+          var fakeCallback2 = sinon.spy();
+          var fakeCallback3 = sinon.spy();
+          var fakeCallback4 = sinon.spy();
+          var fakeCallback5 = sinon.spy();
+          var fakeCallback6 = sinon.spy();
+          device.on('connect', fakeCallback1);
+          device.on('close', fakeCallback2);
+          device.on('reconnect', fakeCallback3);
+          device.on('offline', fakeCallback4);
+          device.on('error', fakeCallback5);
+          device.on('message', fakeCallback6);
+          // Now emit messages
+          mockMQTTClientObject.emit('connect');
+          assert(fakeCallback1.calledOnce);
+          sinon.assert.notCalled(fakeCallback2);
+          sinon.assert.notCalled(fakeCallback3);
+          sinon.assert.notCalled(fakeCallback4);
+          sinon.assert.notCalled(fakeCallback5);
+          sinon.assert.notCalled(fakeCallback6);
+          mockMQTTClientObject.emit('close');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          sinon.assert.notCalled(fakeCallback3);
+          sinon.assert.notCalled(fakeCallback4);
+          sinon.assert.notCalled(fakeCallback5);
+          sinon.assert.notCalled(fakeCallback6);
+          mockMQTTClientObject.emit('reconnect');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          sinon.assert.notCalled(fakeCallback4);
+          sinon.assert.notCalled(fakeCallback5);
+          sinon.assert.notCalled(fakeCallback6);
+          mockMQTTClientObject.emit('offline');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          sinon.assert.notCalled(fakeCallback5);
+          sinon.assert.notCalled(fakeCallback6);
+          mockMQTTClientObject.emit('error');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+          sinon.assert.notCalled(fakeCallback6);
+          mockMQTTClientObject.emit('message');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+          assert(fakeCallback6.calledOnce);
+        });
+    });
+//
+// Verify that the end and handleMessage APIs are passed-through
+//
+    describe("Ensure that the end and handleMessage APIs are passed through", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should call the corresponding methods in mqtt", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:128000
+            } );
+          mockMQTTClientObject.emit('connect');
+          device.end( false, null );
+          assert.equal(mockMQTTClientObject.commandCalled['end'], 1); // Called once
+          assert.equal(mockMQTTClientObject.commandCalled['handleMessage'], 0); // Not called yet
+          device.handleMessage( 'message', function() { console.log('callback'); } );
+          assert.equal(mockMQTTClientObject.commandCalled['end'], 1); // Called once
+          assert.equal(mockMQTTClientObject.commandCalled['handleMessage'], 1); // Called once
+        });
+    });
+//
+// Verify that subscriptions are sent to the mqtt client only after
+// the connection has been established.  
+//
+    describe("Verify that subscriptions are automatically renewed after connection established", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should renew subscriptions after re-connecting", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+         // Reinit mockMQTTClientObject
+         mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+            } );
+         device.subscribe( 'topic1', { }, null );
+         device.subscribe( 'topic2', { }, null );
+         device.subscribe( 'topic3', { }, null );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 0); // Connection not yet established
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 0); // Connection not yet established
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 0); // Connection not yet established
+         clock.tick( drainTimeMs * 3 );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection established, subscriptions sent
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic1');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic2');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic3');
+         device.unsubscribe('topic2' );
+         mockMQTTClientObject.emit('close');
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         clock.tick( drainTimeMs * 2 );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 5); // Connection established
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic1');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic3');
+         device.subscribe( [ 'arrayTopic1', 'arrayTopic2', 'arrayTopic3', 'arrayTopic4' ], { }, null );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 6); // Connection established
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'arrayTopic1');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'arrayTopic2');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'arrayTopic3');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'arrayTopic4');
+         mockMQTTClientObject.emit('close');
+         device.unsubscribe('arrayTopic2' );
+         device.unsubscribe('arrayTopic4' );
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 6); // Connection not yet established
+         clock.tick( drainTimeMs * 4 );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 10); // Connection established
+        });
+    });
+//
+// Verify that publishes are queued while offline and sent after the connection has been
+// established.  Also verify that queued publishes drain at the proper rate.
+//
+    describe("Verify that publishes are queued while offline and drain at the correct rate", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should queue publishes while offline and drain at the correct rate", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+            } );
+         mockMQTTClientObject.emit('connect');     // Connection established
+         device.publish( 'topic1', 'message1' );
+         device.publish( 'topic1', 'message2' );
+         device.publish( 'topic1', 'message3' );
+         device.publish( 'topic1', 'message4' );
+         device.publish( 'topic1', 'message5' );
+         device.publish( 'topic1', 'message6' );
+         //
+         // These publishes were sent while connected and sent to mqtt
+         //
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message1');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message2');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message3');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message4');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message5');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message6');
+         clock.tick(drainTimeMs+1);
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('close');     
+         device.publish( 'topic1', 'message7' );
+         device.publish( 'topic1', 'message8' );
+         device.publish( 'topic1', 'message9' );
+         device.publish( 'topic1', 'message10' );
+         device.publish( 'topic1', 'message11' );
+         device.publish( 'topic1', 'message12' );
+         //
+         // These publishes have been queued, not sent to mqtt 
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('connect');     // Connection established
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( drainTimeMs+1 );                        // Connection established + 1 drain period
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message7' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message8' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message9' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message10' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message11' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message12' );
+         clock.tick( 1000000 );                 // any very large number will work here
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+        });
+    });
+//
+// Verify that subscriptions are sent directly to the mqtt client if 
+// auto-resubscribe is disabled, and that subscriptions aren't re-sent
+// after the connection is restored
+//
+    describe("Verify operation when auto-resubscribe is set to false ", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should not renew subscriptions after re-connecting", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+               autoResubscribe: false
+            } );
+         device.subscribe( 'topic1', { }, null );
+         device.subscribe( 'topic2', { }, null );
+         device.subscribe( 'topic3', { }, null );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         clock.tick( drainTimeMs * 3 );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection established, subscriptions sent
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic1');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic2');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic3');
+         device.unsubscribe('topic2' );
+         mockMQTTClientObject.emit('close');
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 3); // Connection not yet established
+         device.subscribe( 'topic4', { }, null );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 4); // Connection not yet established
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 4); // Connection not yet established
+         clock.tick( drainTimeMs * 2 );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 4); // Connection established
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), 'topic4');
+         assert.equal(mockMQTTClientObject.subscriptions.shift(), undefined);
+         device.subscribe( [ 'arrayTopic1', 'arrayTopic2', 'arrayTopic3', 'arrayTopic4' ], { }, null );
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 5); // Connection established
+         mockMQTTClientObject.subscriptions.shift();
+         mockMQTTClientObject.emit('close');
+         device.unsubscribe('arrayTopic2' );
+         device.unsubscribe('arrayTopic4' );
+         mockMQTTClientObject.emit('connect');
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 5); // Connection not yet established
+         clock.tick( 1000000 );     // any very large value is fine here
+         assert.equal(mockMQTTClientObject.commandCalled['subscribe'], 5); // Connection established
+        });
+    });
+//
+// Verify that publishes are not queued while offline if offline queueing is disabled.
+//
+    describe("Verify operation if offlineQueueing is set to false", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should not queue publishes while offline if offlineQueueing is set to false", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+               offlineQueueing: false
+            } );
+         mockMQTTClientObject.emit('connect');     // Connection established
+         clock.tick( drainTimeMs );
+         device.publish( 'topic1', 'message1' );
+         device.publish( 'topic1', 'message2' );
+         device.publish( 'topic1', 'message3' );
+         device.publish( 'topic1', 'message4' );
+         device.publish( 'topic1', 'message5' );
+         device.publish( 'topic1', 'message6' );
+         //
+         // These publishes were sent while connected and sent to mqtt
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message1');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message2');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message3');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message4');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message5');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message6');
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('close');     
+         device.publish( 'topic1', 'message7' );
+         device.publish( 'topic1', 'message8' );
+         device.publish( 'topic1', 'message9' );
+         device.publish( 'topic1', 'message10' );
+         device.publish( 'topic1', 'message11' );
+         device.publish( 'topic1', 'message12' );
+         //
+         // These publishes were not sent to the mqtt client
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1000000 );                 // any very large number will work here
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+        });
+    });
+//
+// Verify that publishes are queued while offline with a maximum queue size and 'oldest'
+// drop policy.  Also verify that queued publishes drain at the proper rate.
+//
+    describe("Verify that offline queue enforces max size/oldest and drains at the correct rate", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should queue publishes while offline and drain at the correct rate", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+               offlineQueueMaxSize: 5,
+               offlineQueueDropBehavior: 'oldest'
+            } );
+         mockMQTTClientObject.emit('connect');     // Connection established
+         clock.tick( drainTimeMs );
+         device.publish( 'topic1', 'message1' );
+         device.publish( 'topic1', 'message2' );
+         device.publish( 'topic1', 'message3' );
+         device.publish( 'topic1', 'message4' );
+         device.publish( 'topic1', 'message5' );
+         device.publish( 'topic1', 'message6' );
+         //
+         // These publishes were sent while connected and sent to mqtt
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message1');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message2');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message3');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message4');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message5');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message6');
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('close');     
+         device.publish( 'topic1', 'message7' );     // this one will be dropped
+         device.publish( 'topic1', 'message8' );
+         device.publish( 'topic1', 'message9' );
+         device.publish( 'topic1', 'message10' );
+         device.publish( 'topic1', 'message11' );
+         device.publish( 'topic1', 'message12' );
+         //
+         // These publishes have been queued, not sent to mqtt 
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('connect');     // Connection established
+         clock.tick( drainTimeMs );                        // 1 drain period
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message8' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message9' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message10' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message11' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message12' );
+         clock.tick( 1000000 );                 // any very large number will work here
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+        });
+    });
+//
+// Verify that publishes are queued while offline with a maximum queue size and 'newest'
+// drop policy.  Also verify that queued publishes drain at the proper rate.
+//
+    describe("Verify that offline queue enforces max size/newest and drains at the correct rate", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+       it("should queue publishes while offline and drain at the correct rate", function() {
+         // Test parameters
+         var drainTimeMs = 250;
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               baseReconnectTimeMs:1000,
+               minimumConnectionTimeMs:20000,
+               maximumReconnectTimeMs:128000,
+               drainTimeMs: drainTimeMs,
+               offlineQueueMaxSize: 4,
+               offlineQueueDropBehavior: 'newest'
+            } );
+         mockMQTTClientObject.emit('connect');     // Connection established
+         clock.tick( drainTimeMs );
+         device.publish( 'topic1', 'message1' );
+         device.publish( 'topic1', 'message2' );
+         device.publish( 'topic1', 'message3' );
+         device.publish( 'topic1', 'message4' );
+         device.publish( 'topic1', 'message5' );
+         device.publish( 'topic1', 'message6' );
+         //
+         // These publishes were sent while connected and sent to mqtt
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message1');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message2');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message3');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message4');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message5');
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message6');
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('close');     
+         device.publish( 'topic1', 'message7' );
+         device.publish( 'topic1', 'message8' );
+         device.publish( 'topic1', 'message9' );
+         device.publish( 'topic1', 'message10' );
+         device.publish( 'topic1', 'message11' );  // this one will be dropped
+         device.publish( 'topic1', 'message12' );  // this one will be dropped
+         //
+         // These publishes have been queued, not sent to mqtt 
+         //
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         mockMQTTClientObject.emit('connect');     // Connection established
+         clock.tick( drainTimeMs );                // 1 drain period
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message7' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message8' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message9' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), 'message10' );
+         clock.tick( drainTimeMs-1 );                        
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+         clock.tick( 1000000 );                 // any very large number will work here
+         assert.equal(mockMQTTClientObject.publishes.shift(), undefined);
+        });
+    });
+   describe( "device doesn't accept invalid queueing parameters: offlineQueueMaxSize<1", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               offlineQueueMaxSize:-1
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device doesn't accept invalid queueing parameters: offlineQueueDropBehavior bad value", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               offlineQueueDropBehavior:'bogus'
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device doesn't accept invalid timing parameters: minConnect<reconnectPeriod", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:1000,
+               minimumConnectionTimeMs:500
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device doesn't accept invalid timing parameters: maxReconnect<reconnectPeriod", function() {
+      it("throws an exception", function() {
+         assert.throws( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:500
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device accepts valid timing parameters", function() {
+      it("does not throw an exception", function() {
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:5000
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+	    );
+      });
+   });
+   describe( "device handles reconnect timing correctly", function() {
+      var clock;
+
+      before( function() { clock = sinon.useFakeTimers(); } );
+      after( function() { clock.restore(); } );
+
+      it ("sets the reconnect period appropriately", function() {
+         assert.doesNotThrow( function( err ) {
+//
+// Constants reconnection quiet time constants used in this test.
+//
+            const baseReconnectTimeMs     = 1000;
+            const minimumConnectionTimeMs = 2500;
+            const maximumReconnectTimeMs  = 128000;
+
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:baseReconnectTimeMs,
+               minimumConnectionTimeMs:minimumConnectionTimeMs,
+               maximumReconnectTimeMs:maximumReconnectTimeMs
+               } );
+//
+// Check reconnection timing and progression to maximum.
+//
+            mockMQTTClientObject.emit('connect');
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+
+            for (i = 0, currentReconnectTimeMs = baseReconnectTimeMs*2; 
+                 i < 7; 
+                 i++, currentReconnectTimeMs*=2)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            currentReconnectTimeMs/=2;
+            for (i = 0; i < 4; i++)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+//
+// Check that an unstable connection doesn't reset the reconnection progression
+// timing.
+//
+            mockMQTTClientObject.emit('connect');
+            clock.tick( minimumConnectionTimeMs-1 );
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+            clock.tick( minimumConnectionTimeMs );  // make sure timer was cleared
+            mockMQTTClientObject.emit('reconnect');
+            assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+//
+// Check that a stable connection resets the reconnection progression timing.
+//
+            mockMQTTClientObject.emit('connect');
+            clock.tick( minimumConnectionTimeMs+1 );
+            assert.equal(mockMQTTClientObject.options.reconnectPeriod, baseReconnectTimeMs);
+//
+// And check that it progresses correctly again...
+//
+            mockMQTTClientObject.emit('close');
+
+            mockMQTTClientObject.emit('connect');
+            mockMQTTClientObject.emit('offline');
+            mockMQTTClientObject.emit('close');
+            for (i = 0, currentReconnectTimeMs = baseReconnectTimeMs*2; 
+                 i < 7; 
+                 i++, currentReconnectTimeMs*=2)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            currentReconnectTimeMs/=2;
+            for (i = 0; i < 4; i++)
+            {
+               mockMQTTClientObject.emit('reconnect');
+               mockMQTTClientObject.emit('close');
+               mockMQTTClientObject.emit('offline');
+               assert.equal(mockMQTTClientObject.options.reconnectPeriod, currentReconnectTimeMs);
+            }
+            }, function(err) { console.log('\t['+err+']'); return true;}
+          );
+      });
+   });
+//
+// Verify that events from the mqtt client are propagated upwards
+//
+    describe("Ensure that events are propagated upwards", function() {
+       it("should emit the corresponding events", function() {
+          // Reinit mockMQTTClientObject
+          mockMQTTClientObject.reInitCommandCalled();
+         var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'https://data.iot.us-east-1.amazonaws.com',
+               reconnectPeriod:1000,
+               minimumConnectionTimeMs:2500,
+               maximumReconnectTimeMs:128000
+            } );
+          // Register a fake callback
+          var fakeCallback1 = sinon.spy();
+          var fakeCallback2 = sinon.spy();
+          var fakeCallback3 = sinon.spy();
+          var fakeCallback4 = sinon.spy();
+          var fakeCallback5 = sinon.spy();
+          device.on('connect', fakeCallback1);
+          device.on('close', fakeCallback2);
+          device.on('reconnect', fakeCallback3);
+          device.on('offline', fakeCallback4);
+          device.on('error', fakeCallback5);
+          // Now emit messages
+          mockMQTTClientObject.emit('connect');
+          mockMQTTClientObject.emit('close');
+          mockMQTTClientObject.emit('reconnect');
+          mockMQTTClientObject.emit('offline');
+          mockMQTTClientObject.emit('error');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+        });
+    });
+   describe( "websocket protocol URL is prepared correctly when session token is not present", function() {
 //
 // Verify that the device module will not throw an exception when correctly
 // configured for websocket operation.
 //
-      it("throws exception", function() { 
+      var clock;
 
-         assert.throws( function( err ) { 
-            var device = deviceModule( { 
-               region:'us-east-1',
-               protocol: 'bss'
-               } );
-            }, function(err) { console.log('\t['+err+']'); return true;}
-            ); 
+//
+// Fix the date at a known value so that the URL preparation code will always produce
+// the same result.
+//
+      before( function() { clock = sinon.useFakeTimers( (new Date('11/15/86 PST')).getTime(), 'Date' ); } );
+      after( function() { clock.restore(); } );
+
+      it("calculates the url correctly", function() {
+         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdata%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=2f5c6df9fea874125a491d9bc5cbfd30279fd124b029e1ab18b0e77e8369f55c';
+
+         var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key','not a valid secret access key' );
+         assert.equal( url, expectedUrl );
+      });
+   });
+   describe( "websocket protocol URL is prepared correctly when session token is present", function() {
+//
+// Verify that the device module will not throw an exception when correctly
+// configured for websocket operation.
+//
+      var clock;
+//
+// Fix the date at a known value so that the URL preparation code will always produce
+// the same result.
+//
+      before( function() { clock = sinon.useFakeTimers( (new Date('11/15/86 PST')).getTime(), 'Date' ); } );
+      after( function() { clock.restore(); } );
+
+      it("calculates the url correctly", function() {
+
+         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdata%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=2f5c6df9fea874125a491d9bc5cbfd30279fd124b029e1ab18b0e77e8369f55c&X-Amz-Security-Token=not%2Fa%2Fvalid%2Fsession%20token';
+
+         var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key','not a valid secret access key', 'not/a/valid/session token' );
+         assert.equal( url, expectedUrl );
       });
    });
 });
