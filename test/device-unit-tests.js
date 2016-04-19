@@ -387,10 +387,9 @@ describe( "device class unit tests", function() {
             ); 
       });
    });
-
    describe( "device throws an exception if using websocket protocol without IAM credentials", function() {
 //
-// Verify that the device module will not throw an exception when correctly
+// Verify that the device module throws an exception when incorrectly
 // configured for websocket operation.
 //
       it("throws exception", function() { 
@@ -407,6 +406,41 @@ describe( "device class unit tests", function() {
             ); 
       });
    });
+   describe( "device throws an exception if using websocket protocol with no region specified", function() {
+//
+// Verify that the device module throws an exception when configured for
+// websocket operation with no region specified.
+//
+      it("throws exception", function() { 
+
+         assert.throws( function( err ) { 
+            process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
+            process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
+            var device = deviceModule( { 
+               protocol: 'wss',
+               debug: true
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+//
+// Verify that the device module throws an exception when configured for
+// websocket operation with a host but no region specified.
+//
+      it("throws exception", function() { 
+
+         assert.throws( function( err ) { 
+            process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
+            process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
+            var device = deviceModule( { 
+               host: 'not-a-valid-host.com',
+               protocol: 'wss',
+               debug: true
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+   });
    describe( "device does not throw exception if using websocket protocol with IAM credentials in environment", function() {
 //
 // Verify that the device module will not throw an exception when correctly
@@ -415,12 +449,32 @@ describe( "device class unit tests", function() {
       it("does not throw an exception", function() { 
 
          assert.doesNotThrow( function( err ) {
-            process.env.AWS_ACCESS_KEY_ID='not a valid access key';
+            process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
             process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
             var device = deviceModule( { 
                region:'us-east-1',
                protocol: 'wss',
+               debug: true
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+   });
+   describe( "device does not throw exception if using websocket protocol with IAM credentials in class options", function() {
+//
+// Verify that the device module will not throw an exception when correctly
+// configured for websocket operation.
+//
+      it("does not throw an exception", function() { 
+
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( { 
+               region:'us-east-1',
+               protocol: 'wss',
                debug: true,
+               accessKeyId: 'not a valid access key id',
+               secretKey: 'not a valid secret access key',
+               sessionToken: 'not a valid session token',
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 

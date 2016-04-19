@@ -637,10 +637,18 @@ function ThingShadowsClient(deviceOptions, thingShadowOptions) {
    };
    //
    // Close the device connection; this will be passed through to
-   // the MQTT class.
+   // the device class.
    //
    this.end = function(force, callback) {
       device.end(force, callback);
+   };
+   //
+   // Call this function to update the credentials used when
+   // connecting via WebSocket/SigV4; this will be passed through
+   // to the device class.
+   //
+   this.updateWebSocketCredentials = function(accessKeyId, secretKey, sessionToken, expiration) {
+      device.updateWebSocketCredentials(accessKeyId, secretKey, sessionToken, expiration);
    };
 
    //

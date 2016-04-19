@@ -1,8 +1,6 @@
-# AWS IoT SDK for Node.js
+# AWS IoT SDK for JavaScript
 The aws-iot-device-sdk.js package allows developers to write JavaScript 
-applications which access the AWS IoT Platform; it is intended for use in
-embedded devices which support Node.js, but it can be used in other Node.js 
-environments as well.
+applications which access the AWS IoT Platform via [MQTT or MQTT over the Secure WebSocket Protocol](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html).  It can be used in Node.js environments as well as in browser applications.
 
 * [Overview](#overview)
 * [Installation](#install)
@@ -10,6 +8,7 @@ environments as well.
 * [API Documentation](#api)
 * [Connection Types](#connections)
 * [Example Programs](#programs)
+* [Browser Applications](#browser)
 * [Troubleshooting](#troubleshooting)
 * [Unit Tests](#unittests)
 * [License](#license)
@@ -18,7 +17,7 @@ environments as well.
 <a name="overview"></a>
 ## Overview
 This document provides instructions on how to install and configure the AWS 
-IoT device SDK for Node.js and includes examples demonstrating use of the
+IoT device SDK for JavaScript, and includes examples demonstrating use of the
 SDK APIs.
 
 ### MQTT Connection
@@ -229,7 +228,6 @@ follows:
   * `clientCert`: same as `certPath`, but can also accept a buffer containing client certificate data
   * `privateKey`: same as `keyPath`, but can also accept a buffer containing private key data
   * `caCert`: same as `caPath`, but can also accept a buffer containing CA certificate data
-  * `protocol`: the connection type, either 'mqtts' (default) or 'wss' (WebSocket/TLS)
   * `autoResubscribe`: set to 'true' to automatically re-subscribe to topics after reconnection (default 'true')
   * `offlineQueueing`: set to 'true' to automatically queue published messages while offline (default 'true')
   * `offlineQueueMaxSize`: enforce a maximum size for the offline message queue (default 0, e.g. no maximum)
@@ -238,6 +236,11 @@ follows:
   * `baseReconnectTimeMs`: the base reconnection time in milliseconds (default 1000)
   * `maximumReconnectTimeMs`: the maximum reconnection time in milliseconds (default 128000)
   * `minimumConnectionTimeMs`: the minimum time in milliseconds that a connection must be maintained in order to be considered stable (default 20000)
+  * `protocol`: the connection type, either 'mqtts' (default) or 'wss' (WebSocket/TLS).  Note that when set to 'wss', values must be provided for the Access Key ID and Secret Key in either the following options or in environment variables as specified in [WebSocket Configuration](#websockets).
+  * `websocketOptions`: if `protocol` is set to 'wss', you can use this parameter to pass additional options to the underlying WebSocket object; these options are documented [here](https://github.com/websockets/ws/blob/master/doc/ws.md#class-wswebsocket).
+  * `accessKeyId`: used to specify the Access Key ID when `protocol` is set to 'wss'.  Overrides the environment variable `AWS_ACCESS_KEY_ID` if set.
+  * `secretKey`: used to specify the Secret Key when `protocol` is set to 'wss'.  Overrides the environment variable `AWS_SECRET_ACCESS_KEY` if set.
+  * `sessionToken`: (required when authenticating via Cognito, optional otherwise) used to specify the Session Token when `protocol` is set to 'wss'.  Overrides the environment variable `AWS_SESSION_TOKEN` if set.
 
 All certificates and keys must be in PEM format.
 
@@ -246,6 +249,16 @@ All certificates and keys must be in PEM format.
 of these arguments.
 
 Supports all events emitted by the [mqtt.Client()](https://github.com/mqttjs/MQTT.js/blob/master/README.md#client) class.
+
+<a name="updateWebSocketCredentials"></a>
+### awsIot.device#updateWebSocketCredentials(accessKeyId, secretKey, sessionToken, expiration)
+
+Update the credentials set used to authenticate via WebSocket/SigV4.  This method is designed to be invoked during the callback of the [getCredentialsForIdentity method](http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/CognitoIdentity.html#getCredentialsForIdentity-property) in the [AWS SDK for JavaScript](http://docs.aws.amazon.com/AWSJavaScriptSDK/guide/index.html).
+
+* `accessKeyId`: the latest Access Key to use when connecting via WebSocket/SigV4
+* `secretKey`: the latest Secret Key to use when connecting via WebSocket/SigV4
+* `sessionToken`: the latest Session Token to use when connecting via WebSocket/SigV4
+* `expiration`: the time this credentials set will expire
 
 -------------------------------------------------------
 <a name="thingShadow"></a>
@@ -772,6 +785,103 @@ synchronize to the device's current state.
 
 The simulation can be exited at any time by pressing <kbd>q</kbd>, 
 <kbd>Ctrl</kbd>+<kbd>c</kbd>, or by selecting 'exit' on the menu bar.
+
+<a name="browser"></a>
+## Browser Applications
+This SDK can be packaged to run in a browser using [browserify](http://browserify.org/), and includes helper scripts and example application code to help you get started writing browser applications that use AWS IoT.
+
+### Background
+Browser applications connect to AWS IoT using [MQTT over the Secure WebSocket Protocol](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html).  There are some important differences between Node.js and browser environments, so a few adjustments are necessary when using this SDK in a browser application.
+
+When running in a browser environment, the SDK doesn't have access to the filesystem or process environment variables, so these can't be used to store credentials.  While it might be possible for an application to prompt the user for IAM credentials, the [Amazon Cognito Identity Service](https://aws.amazon.com/cognito/) provides a more user-friendly way to retrieve credentials which can be used to access AWS IoT.  The [temperature-monitor](#temperature-monitor-browser-example) browser example application illustrates this use case.
+
+### Installing browserify
+In order to work with the browser example applications and utilities in this SDK, you'll need to make sure that `browserify` is installed.  These instructions and the scripts in this package assume that it is installed globally, as with:
+
+```sh
+	npm install -g browserify
+```
+
+### Browser Application Utility
+This SDK includes a utility script called `scripts/browserize.sh`.  This script can create a browser bundle containing both the [AWS SDK for JavaScript](https://aws.amazon.com/sdk-for-browser/) and this SDK, or you can use it to create application bundles for browser applications, like the ones under the `examples/browser` directory.  To create the combined AWS SDK browser bundle, run this command in the SDK's top-level directory:
+
+```sh
+	npm run-script browserize
+```
+
+This command will create a browser bundle in `browser/aws-iot-sdk-browser-bundle.js`.  The browser bundle makes both the `aws-sdk` and `aws-iot-device-sdk` modules available so that you can `require` them from your browserified application bundle.
+
+#### Creating Application Bundles
+You can also use the `scripts/browserize.sh` script to browserify your own applications and use them with the AWS SDK browser bundle.  For example, to prepare the [temperature-monitor](#temperature-monitor-browser-example) browser example application for use, run this command in the SDK's top-level directory:
+
+```sh
+	npm run-script browserize examples/browser/temperature-monitor/index.js
+```
+
+This command does two things.  First, it creates an application bundle from `examples/browser/temperature-monitor/index.js` and places it in `examples/browser/temperature-monitor/bundle.js`.  Second, it copies the `browser/aws-iot-sdk-browser-bundle.js` into your application's directory where it can be used, e.g.:
+
+```html
+<script src="aws-iot-sdk-browser-bundle.js"></script>
+<script src="bundle.js"></script>
+```
+
+<a name="temperature-monitor-browser-example"></a>
+### Temperature Monitor Browser Example Application
+This SDK includes a companion browser application to the [Temperature Control Example Application](#temp-control).  The browser application allows you to monitor the status of the simulated temperature control device.
+
+1. Follow the instructions to install the [Temperature Control Example Application](#temp-control) 
+	
+1. In order for the browser application to be able to authenticate and connect to AWS IoT, you'll need to configure a Cognito Identity Pool.  In the [Amazon Cognito console](https://console.aws.amazon.com/cognito/), use Amazon Cognito to create a new identity pool, and allow unauthenticated identities to connect.  Obtain the `PoolID` constant. Make sure that the policy attached to the [unauthenticated role](https://console.aws.amazon.com/iam/home?#roles) has permissions to access the required AWS IoT APIs.  More information about AWS IAM roles and policies can be found [here](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage.html).
+
+1. Edit `examples/browser/temperature-monitor/aws-configuration.js`, and replace the values of `poolId` and `region` with strings containing the ID of the Cognito Identity Pool and your AWS region (e.g., `'us-east-1'`) from the previous step.
+
+1. Create the application browser bundle by executing the following command in the top-level directory of the SDK:
+
+	```sh
+	npm run-script browserize examples/browser/temperature-monitor/index.js
+	``` 
+1. Start an instance of the device simulation using:
+
+	```sh
+	node examples/temperature-control/temperature-control.js -f ~/certs --test-mode=2
+	```
+	_NOTE_: _Although the above example shows connecting using a certificate/private key set, you can use any of the command line options described in the [Example Programs Section](#programs)._
+
+1. Open `examples/browser/temperature-monitor/index.html` in your web browser.  It should connect to AWS IoT and began displaying the status of the simulated temperature control device you started in the previous step.  If you change the device's settings, the browser window should update and display the latest status values.
+
+<a name="lifecycle-event-monitor-browser-example"></a>
+### Lifecycle Event Monitor Browser Example Application
+This SDK includes a browser application which demonstrates the functionality of [AWS IoT lifecycle events](http://docs.aws.amazon.com/iot/latest/developerguide/life-cycle-events.html).  AWS IoT generates lifecycle events whenever clients connect or disconnect; applications can monitor these and take action when clients connect or disconnect from AWS IoT.  Follow these instructions to run the application:
+
+1. In order for the browser application to be able to authenticate and connect to AWS IoT, you'll need to configure a Cognito Identity Pool.  In the [Amazon Cognito console](https://console.aws.amazon.com/cognito/), use Amazon Cognito to create a new identity pool, and allow unauthenticated identities to connect.  Obtain the `PoolID` constant. Make sure that the policy attached to the [unauthenticated role](https://console.aws.amazon.com/iam/home?#roles) has permissions to access the required AWS IoT APIs.  More information about AWS IAM roles and policies can be found [here](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage.html).
+
+1. Edit `examples/browser/lifecycle/aws-configuration.js`, and replace the values of `poolId` and `region` with strings containing the ID of the Cognito Identity Pool and your AWS region (e.g., `'us-east-1'`) from the previous step.
+1. Create the application browser bundle by executing the following command in the top-level directory of the SDK:
+
+	```sh
+	npm run-script browserize examples/browser/lifecycle/index.js
+	``` 
+	
+1. Open `examples/browser/lifecycle/index.html` in your web browser.  After connecting to AWS IoT, it should display 'connected clients'.
+1. Start programs which connect to AWS IoT (e.g., [the example programs in this package](#programs)).  Make sure that these programs are connecting to the same AWS region that your Cognito Identity Pool was created in.  The browser application will display a green box containing the client ID of each client which connects; when the client disconnects, the box will disappear.
+
+<a name="mqtt-explorer-browser-example"></a>
+### MQTT Explorer Browser Example Application
+This SDK includes a browser application which implements a simple interactive MQTT client.  You can use this application to subscribe to a topic and view the messages that arrive on it, or to publish to a topic.  Follow these instructions to run the application:
+
+1. In order for the browser application to be able to authenticate and connect to AWS IoT, you'll need to configure a Cognito Identity Pool.  In the [Amazon Cognito console](https://console.aws.amazon.com/cognito/), use Amazon Cognito to create a new identity pool, and allow unauthenticated identities to connect.  Obtain the `PoolID` constant. Make sure that the policy attached to the [unauthenticated role](https://console.aws.amazon.com/iam/home?#roles) has permissions to access the required AWS IoT APIs.  More information about AWS IAM roles and policies can be found [here](http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage.html).
+
+1. Edit `examples/browser/mqtt-explorer/aws-configuration.js`, and replace the values of `poolId` and `region` with strings containing the ID of the Cognito Identity Pool and your AWS region (e.g., `'us-east-1'`) from the previous step.
+1. Create the application browser bundle by executing the following command in the top-level directory of the SDK:
+
+	```sh
+	npm run-script browserize examples/browser/mqtt-explorer/index.js
+	``` 
+	
+1. Open `examples/browser/mqtt-explorer/index.html` in your web browser.  After connecting to AWS IoT, it should display input fields allowing you to subscribe or publish to a topic.  By subscribing to '#', for example, you will be able to monitor all traffic within your AWS account as allowed by the policy associated with the unauthenticated role of your Cognito Identity Pool.
+
+### Optimizations
+If you're writing a browser application based on the examples in this SDK, you might consider creating a smaller version of the AWS SDK for JavaScript using [the AWS SDK for JavaScript Custom Builder](https://sdk.amazonaws.com/builder/js/).  This tool allows you to create a version containing only the pieces of the SDK that you need (e.g., Cognito Identity), helping to reduce the size of the SDK bundle.  There are also tools available for reducing the size of JavaScript application bundles (e.g. [UglifyJS](https://github.com/mishoo/UglifyJS2)), but the `browserize.sh` script does not yet make use of them; bundle optimizations are left up to the user. 
 
 <a name="troubleshooting"></a>
 ## Troubleshooting

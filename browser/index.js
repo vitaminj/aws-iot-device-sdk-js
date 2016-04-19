@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2015-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -12,16 +12,8 @@
  * express or implied. See the License for the specific language governing
  * permissions and limitations under the License.
  */
+var AWS = require('aws-sdk');
+var AWSIoTData = require('aws-iot-device-sdk');
 
-//node.js deps
-
-//npm deps
-const websocket = require('websocket-stream');
-
-//app deps
-
-function buildBuilder(client, opts) {
-   return websocket(opts.url, ['mqttv3.1'],opts.websocketOptions);
-}
-
-module.exports = buildBuilder;
+module.exports.AWS = AWS;
+module.exports.AWSIoTData = AWSIoTData;

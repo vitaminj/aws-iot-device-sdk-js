@@ -1,3 +1,12 @@
+## [1.0.12](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.12) (April 19, 2016)
+
+Features
+  - Added support for use in browser applications
+
+Bugfixes/Improvements
+  - Incorporated GitHub pull request [#49](https://github.com/aws/aws-iot-device-sdk-js/pull/49)
+  - Fixes for GitHub issues [#41](https://github.com/aws/aws-iot-device-sdk-js/issues/41), [#47](https://github.com/aws/aws-iot-device-sdk-js/issues/47), and [#50](https://github.com/aws/aws-iot-device-sdk-js/issues/50).
+
 ## [1.0.11](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.11) (March 4, 2016)
 
 Features:

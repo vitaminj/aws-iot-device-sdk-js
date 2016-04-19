@@ -47,7 +47,7 @@ gulp.task('test', ['jshint'], function() {
 gulp.task('jshint', function() {
   console.log('Analyzing source with JSHint and JSCS');
   return gulp
-    .src(['common/lib/*.js','examples/**/*.js', 'device/**/*.js','thing/*.js','index.js', '!node_modules/**/*.js', '!examples/**/node_modules/**/*.js'])
+    .src(['common/lib/*.js','examples/**/*.js', 'device/**/*.js','thing/*.js','index.js', '!node_modules/**/*.js', '!examples/**/node_modules/**/*.js', '!examples/**/aws-configuration.js', '!browser/**/*bundle.js', '!examples/browser/**/*bundle.js'])
     .pipe(jshint())
     .pipe(jshint.reporter('jshint-stylish', {verbose: true}))
     .pipe(jshint.reporter('fail'))
@@ -57,7 +57,7 @@ gulp.task('jshint', function() {
 gulp.task('beautify', function() {
   console.log('Beautifying source with indent level 3');
   return gulp
-    .src(['common/lib/*.js','examples/**/*.js', 'device/**/*.js','thing/*.js','index.js', '!node_modules/**/*.js', '!examples/**/node_modules/**/*.js'])
+    .src(['!browser/**/*bundle.js', '!examples/**/*bundle.js', 'browser/**/*.js','common/**/*.js','examples/**/*.js', 'device/**/*.js','thing/*.js','index.js', '!node_modules/**/*.js', '!examples/**/node_modules/**/*.js', '!browser/**/*bundle.js', '!examples/browser/**/*bundle.js'])
     .pipe(beautify({'indent_size':3, 'indent_char': ' ', 'end_with_newline': true}))
 //
 // Replace the files in-place with the beautified versions.

@@ -229,13 +229,15 @@ function DeviceClient(options) {
    //
    // Subscription cache; active if autoResubscribe === true
    //
-   var activeSubscriptions = new Map();
+   var activeSubscriptions = [];
    var autoResubscribe = true;
+   activeSubscriptions.length = 0;
 
    //
-   // Iterated subscription cache; active during initial draining.
+   // Cloned subscription cache; active during initial draining.
    //
-   var subscriptionIterator;
+   var clonedSubscriptions = [];
+   clonedSubscriptions.length = 0;
 
    //
    // Contains the operational state of the connection
@@ -373,18 +375,45 @@ function DeviceClient(options) {
       //read and map certificates
       tlsReader(options);
    } else if (options.protocol === 'wss') {
-      //AWS access id and secret key must be available in environment
-      awsAccessId = process.env.AWS_ACCESS_KEY_ID;
-      awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
-      awsSTSToken = process.env.AWS_SESSION_TOKEN;
-
+      //
+      // AWS access id and secret key must be available as either
+      // options or in the environment.
+      //
+      if (!isUndefined(options.accessKeyId)) {
+         awsAccessId = options.accessKeyId;
+      } else {
+         awsAccessId = process.env.AWS_ACCESS_KEY_ID;
+      }
+      if (!isUndefined(options.secretKey)) {
+         awsSecretKey = options.secretKey;
+      } else {
+         awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
+      }
+      if (!isUndefined(options.sessionToken)) {
+         awsSTSToken = options.sessionToken;
+      } else {
+         awsSTSToken = process.env.AWS_SESSION_TOKEN;
+      }
+      // AWS region must be defined when connecting via WebSocket/SigV4
+      if (isUndefined(options.region)) {
+         console.log('AWS region must be defined when connecting via WebSocket/SigV4; see README.md');
+         throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
+      }
+      // AWS Access Key ID and AWS Secret Key must be defined
       if (isUndefined(awsAccessId) || (isUndefined(awsSecretKey))) {
-         console.log('AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be defined in environment');
+         console.log('To connect via WebSocket/SigV4, AWS Access Key ID and AWS Secret Key must be passed either in options or as environment variables; see README.md');
          throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
       }
       // set port, do not override existing definitions if available
       if (isUndefined(options.port)) {
          options.port = 443;
+      }
+      // check websocketOptions and ensure that the protocol is defined
+      if (isUndefined(options.websocketOptions)) {
+         options.websocketOptions = { protocol: 'mqttv3.1' };
+      }
+      else {
+         options.websocketOptions.protocol = 'mqttv3.1';
       }
    }
 
@@ -399,14 +428,26 @@ function DeviceClient(options) {
    protocols.wss = require('./lib/ws');
 
    function _addToSubscriptionCache(topic, options, callback) {
-      activeSubscriptions.set(topic, {
-         options: options,
-         callback: callback
+      var matches = activeSubscriptions.filter(function(element) {
+         return element.topic === topic;
       });
+      //
+      // Add the element only if it doesn't already exist.
+      //
+      if (matches.length === 0) {
+         activeSubscriptions.push({
+            topic: topic,
+            options: options,
+            callback: callback
+         });
+      }
    }
 
    function _deleteFromSubscriptionCache(topic, options, callback) {
-      activeSubscriptions.delete(topic);
+      var remaining = activeSubscriptions.filter(function(element) {
+         return element.topic !== topic;
+      });
+      activeSubscriptions = remaining;
    }
 
    function _updateSubscriptionCache(operation, topics, options, callback) {
@@ -445,10 +486,16 @@ function DeviceClient(options) {
 
    function _wrapper(client) {
       if (options.protocol === 'wss') {
+         var url;
          //
-         // Access id and secret key are available, prepare URL. 
+         // If the access id and secret key are available, prepare the URL. 
+         // Otherwise, set the url to an invalid value.
          //
-         var url = prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken);
+         if (awsAccessId === '' || awsSecretKey === '') {
+            url = 'wss://no-credentials-available';
+         } else {
+            url = prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken);
+         }
 
          if (options.debug === true) {
             console.log('using websockets, will connect to \'' + url + '\'...');
@@ -505,15 +552,17 @@ function DeviceClient(options) {
    function _drainOperationQueue() {
 
       //
-      // Handle our active subscriptions first, using an iterator
-      // for the subscription map.  
+      // Handle our active subscriptions first, using a cloned
+      // copy of the array.  We shift them out one-by-one until
+      // all have been processed, leaving the official record
+      // of active subscriptions untouched.
       // 
-      var iterate = subscriptionIterator.next();
-      if (!iterate.done) {
-         var subscription = iterate.value; // 0:topic, 1:params
-         device.subscribe(subscription[0],
-            subscription[1].options,
-            subscription[1].callback);
+      var subscription = clonedSubscriptions.shift();
+
+      if (!isUndefined(subscription)) {
+         device.subscribe(subscription.topic,
+            subscription.options,
+            subscription.callback);
       } else {
          //
          // Then handle cached operations...
@@ -562,14 +611,17 @@ function DeviceClient(options) {
       // clone the active subscriptions.
       //
       if (drainingTimer === null) {
-         subscriptionIterator = activeSubscriptions[Symbol.iterator]();
+         clonedSubscriptions = activeSubscriptions.slice(0);
          drainingTimer = setInterval(_drainOperationQueue,
             drainTimeMs);
       }
       that.emit('connect');
    });
    device.on('close', function() {
-      console.log('connection lost - will attempt reconnection in ' + device.options.reconnectPeriod / 1000 + ' seconds...');
+      if ((!isUndefined(options)) && (options.debug === true)) {
+         console.log('connection lost - will attempt reconnection in ' +
+            device.options.reconnectPeriod / 1000 + ' seconds...');
+      }
       //
       // Clear the connection and drain timers
       //
@@ -649,6 +701,15 @@ function DeviceClient(options) {
    };
    this.handleMessage = function(packet, callback) {
       device.handleMessage(packet, callback);
+   };
+   //
+   // Call this function to update the credentials used when
+   // connecting via WebSocket/SigV4.
+   //
+   this.updateWebSocketCredentials = function(accessKeyId, secretKey, sessionToken, expiration) {
+      awsAccessId = accessKeyId;
+      awsSecretKey = secretKey;
+      awsSTSToken = sessionToken;
    };
    //
    // Used for integration testing only

@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2015 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * Copyright 2015-2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  * You may not use this file except in compliance with the License.
@@ -13,15 +13,12 @@
  * permissions and limitations under the License.
  */
 
-//node.js deps
-
-//npm deps
-const websocket = require('websocket-stream');
-
-//app deps
-
-function buildBuilder(client, opts) {
-   return websocket(opts.url, ['mqttv3.1'],opts.websocketOptions);
-}
-
-module.exports = buildBuilder;
+/*
+ * NOTE: You must set the following string constants prior to running this
+ * example application.
+ */
+var awsConfiguration = {
+   poolId: YOUR_COGNITO_IDENTITY_POOL_ID_GOES_HERE, // 'YourCognitoIdentityPoolId'
+   region: YOUR_AWS_REGION_GOES_HERE // 'YourAwsRegion', e.g. 'us-east-1'
+};
+module.exports = awsConfiguration;
