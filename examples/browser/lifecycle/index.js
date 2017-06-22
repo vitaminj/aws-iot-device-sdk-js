@@ -60,6 +60,10 @@ const mqttClient = AWSIoTData.device({
    //
    region: AWS.config.region,
    //
+   // Set the AWS IoT Host Endpoint
+   // //
+   host:AWSConfiguration.host,
+   //
    // Use the clientId created earlier.
    //
    clientId: clientId,

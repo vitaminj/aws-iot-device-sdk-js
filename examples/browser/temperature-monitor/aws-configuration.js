@@ -19,6 +19,8 @@
  */
 var awsConfiguration = {
    poolId: YOUR_COGNITO_IDENTITY_POOL_ID_GOES_HERE, // 'YourCognitoIdentityPoolId'
+   host: YOUR_AWS_IOT_ENDPOINT_GOES_HERE, // 'YourAWSIoTEndpoint', e.g. 'prefix.iot.us-east-1.amazonaws.com'
    region: YOUR_AWS_REGION_GOES_HERE // 'YourAwsRegion', e.g. 'us-east-1'
 };
 module.exports = awsConfiguration;
+

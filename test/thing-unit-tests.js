@@ -59,7 +59,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
 
                thingShadows.register( 'testShadow1' );
@@ -80,7 +80,7 @@ describe( "thing shadow class unit tests", function() {
          certPath: 'test/data/certificate.pem.crt',
          caPath: 'test/data/root-CA.crt',
          clientId: 'dummy-client-1',
-         region: 'us-east-1'
+         host:'XXXX.iot.us-east-1.amazonaws.com'
       };
 
       it("should trigger error when a subscription fails", function () {
@@ -133,6 +133,13 @@ describe( "thing shadow class unit tests", function() {
 
             assert(fakeCallback.calledOnce);
       });
+      it("should trigger callback when shadow option is not provided", function() {
+            var thingShadows = thingShadow( thingShadowsConfig );
+            var fakeCallback = sinon.spy();
+            thingShadows.register( 'testShadow1', fakeCallback);
+
+            assert(fakeCallback.calledOnce);
+      });
    });
 
    describe( "subscribe to/unsubscribe from a non-thing topic", function() {
@@ -149,7 +156,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.subscribe('nonThingTopic1', {}, fakeCallback1);
                thingShadows.unsubscribe('nonThingTopic1', fakeCallback2);
@@ -174,7 +181,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             var MAX_TOPIC_ARRAY_SIZE = 8;
             for (var i = 1; i <= MAX_TOPIC_ARRAY_SIZE; i++) {
@@ -207,7 +214,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.publish( 'nonThingTopic1', { data: 'value' } );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -227,7 +234,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.subscribe( '$aws/things/nonThingTopic1' );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -247,7 +254,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.subscribe( ['topic1', '$aws/things/nonThingTopic1', 'topic2']);
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -267,7 +274,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.publish( '$aws/things/nonThingTopic1', 
                                      { data: 'value' } );
@@ -288,7 +295,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.unsubscribe( '$aws/things/nonThingTopic1' );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -307,7 +314,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
                thingShadows.unsubscribe( ['topic1', '$aws/things/nonThingTopic1', 'topic2'] );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -327,7 +334,7 @@ describe( "thing shadow class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
 
                thingShadows.end( true );
@@ -351,7 +358,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing, using default delta settings
           thingShadows.register('testShadow1');
@@ -375,7 +382,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
             debug: true
           } );
           // Register a thing, using default delta settings
@@ -405,7 +412,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
 
           assert.doesNotThrow(function(err) {
@@ -429,7 +436,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
 
           assert.doesNotThrow(function(err) {
@@ -451,7 +458,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow2');
@@ -482,7 +489,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
             debug: true
           } );
           // Register a thing
@@ -514,7 +521,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow2');
@@ -550,7 +557,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           }, {  
             operationTimeout:1000 // Set operation timeout to be 1 sec
           } );
@@ -593,7 +600,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           }, {
             operationTimeout:1000 // Set operation timeout to be 1 sec
           } );
@@ -633,7 +640,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a callback
           thingShadows.on('status', fakeCallback);
@@ -675,7 +682,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow3', {persistentSubscribe:false}); // Unsub once there is a feedback
@@ -711,7 +718,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
           }, {
             operationTimeout:1000 // Set operation timeout to be 1 sec
           } );
@@ -750,7 +757,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a callback
           thingShadows.on('status', fakeCallback);
@@ -789,7 +796,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a callback
           thingShadows.on('status', fakeCallback);
@@ -827,7 +834,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4');
@@ -856,7 +863,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4');
@@ -887,7 +894,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a callback
           thingShadows.on('status', fakeCallback);
@@ -928,7 +935,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4', {persistentSubscribe:false}); // Unsub once there is a feedback
@@ -958,7 +965,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           });
           // Register a thing
           thingShadows.register('testShadow4');
@@ -989,7 +996,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           });
           // Register a thing
           thingShadows.register('testShadow4', {persistentSubscribe:false});
@@ -1026,7 +1033,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           });
           // Register a thing
           thingShadows.register('testShadow4', {persistentSubscribe:false, enableVersioning: true}); // Unsub once there is a feedback
@@ -1065,7 +1072,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
           }, {
             operationTimeout:1000, // Set operation timeout to be 1 sec
           } );
@@ -1104,7 +1111,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a callback
           thingShadows.on('status', fakeCallback);
@@ -1144,7 +1151,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           }, {
             operationTimeout:1000 // Set operation timeout to be 1 sec
           } );
@@ -1194,7 +1201,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
             debug: true
           } );
           // Register a callback
@@ -1228,7 +1235,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4', { debug: true, discardStale: true, enableVersioning: true } );
@@ -1260,7 +1267,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4', { debug: true, discardStale: true, enableVersioning: false } );
@@ -1292,7 +1299,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow4');
@@ -1321,7 +1328,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register non-shadow callback
           thingShadows.on('message', fakeCallback);
@@ -1349,7 +1356,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           assert.doesNotThrow(function(err) {
             // Register 3 shadows
@@ -1390,7 +1397,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register delta callback
           thingShadows.on('delta', distributor);
@@ -1426,7 +1433,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
             debug:true
           } );
           clientToken = thingShadows.get('UnknownThing1');
@@ -1450,7 +1457,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register a thing
           thingShadows.register('testShadow3');
@@ -1496,7 +1503,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1'
+            host:'XXXX.iot.us-east-1.amazonaws.com'
           } );
           // Register fake callbacks
           thingShadows.on('status', fakeCallback);
@@ -1543,7 +1550,7 @@ describe( "thing shadow class unit tests", function() {
             certPath:'test/data/certificate.pem.crt',
             caPath:'test/data/root-CA.crt',
             clientId:'dummy-client-1',
-            region:'us-east-1',
+            host:'XXXX.iot.us-east-1.amazonaws.com',
             operationTimeout: operationTimeout
           } );
           // Register a fake callback

@@ -14,17 +14,19 @@
  */
 
 //node.js deps
-const events = require('events');
-const inherits = require('util').inherits;
+var events = require('events');
+var inherits = require('util').inherits;
 
 //npm deps
-const mqtt = require('mqtt');
-const crypto = require('crypto-js');
+var mqtt = require('mqtt');
+var crypto = require('crypto-js');
 
 //app deps
-const exceptions = require('./lib/exceptions'),
-   isUndefined = require('../common/lib/is-undefined'),
-   tlsReader = require('../common/lib/tls-reader');
+var exceptions = require('./lib/exceptions');
+var isUndefined = require('../common/lib/is-undefined');
+var tlsReader = require('../common/lib/tls-reader');
+var path = require('path');
+var fs = require('fs');
 
 //begin module
 function makeTwoDigits(n) {
@@ -157,6 +159,34 @@ function prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken) {
    return signUrl('GET', 'wss://', hostName, path, queryParams,
       awsAccessId, awsSecretKey, options.region, awsServiceName, '', today, now, options.debug, awsSTSToken);
 }
+
+function arrayEach(array, iterFunction) {
+    for (var idx in array) {
+        if (Object.prototype.hasOwnProperty.call(array, idx)) {
+            iterFunction.call(this, array[idx], parseInt(idx, 10));
+        }
+    }
+} 
+function getCredentials(ini) {
+    //Get shared credential function from AWS SDK.
+    var map = {};
+    var currentSection ={};
+    arrayEach(ini.split(/\r?\n/), function(line) {
+        line = line.split(/(^|\s)[;#]/)[0]; // remove comments
+        var section = line.match(/^\s*\[([^\[\]]+)\]\s*$/);
+        if (section) {
+          currentSection = section[1];
+        } else if (currentSection) {
+          var item = line.match(/^\s*(.+?)\s*=\s*(.+?)\s*$/);
+          if (item) {
+            map[currentSection] = map[currentSection] || {};
+            map[currentSection][item[1]] = item[2];
+          }
+        }
+    });
+    return map;
+}
+
 //
 // This method is the exposed module; it validates the mqtt options,
 // creates a secure mqtt connection via TLS, and returns the mqtt
@@ -309,7 +339,6 @@ function DeviceClient(options) {
    var awsAccessId;
    var awsSecretKey;
    var awsSTSToken;
-
    //
    // Validate options, set default reconnect period if not specified.
    //
@@ -374,11 +403,7 @@ function DeviceClient(options) {
    }
 
    if (isUndefined(options.host)) {
-      if (!(isUndefined(options.region))) {
-         options.host = 'data.iot.' + options.region + '.amazonaws.com';
-      } else {
-         throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
-      }
+      throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
    }
 
    if (options.protocol === 'mqtts') {
@@ -391,9 +416,9 @@ function DeviceClient(options) {
       tlsReader(options);
    } else if (options.protocol === 'wss') {
       //
-      // AWS access id and secret key must be available as either
-      // options or in the environment.
-      //
+      // AWS access id and secret key 
+      // It first check Input options and Environment variables 
+      // If that not available, it will try to load credentials from default credential file
       if (!isUndefined(options.accessKeyId)) {
          awsAccessId = options.accessKeyId;
       } else {
@@ -409,10 +434,34 @@ function DeviceClient(options) {
       } else {
          awsSTSToken = process.env.AWS_SESSION_TOKEN;
       }
-      // AWS region must be defined when connecting via WebSocket/SigV4
-      if (isUndefined(options.region)) {
-         console.log('AWS region must be defined when connecting via WebSocket/SigV4; see README.md');
-         throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
+      if (isUndefined(awsAccessId) || isUndefined(awsSecretKey)) {
+         var filename;
+         try {
+            if(!isUndefined(options.filename)) {
+               filename = options.filename;
+            } else {
+               filename =  _loadDefaultFilename();
+            }
+            var user_profile = options.profile || process.env.AWS_PROFILE || 'default';
+            var creds = getCredentials(fs.readFileSync(filename, 'utf-8'));
+            var profile = creds[user_profile];
+            awsAccessId = profile.aws_access_key_id;
+            awsSecretKey = profile.aws_secret_access_key;
+            awsSTSToken = profile.aws_session_token;
+            } catch (e) {
+               console.log(e);
+               console.log("Failed to read credentials from " + filename);
+            }
+      }
+      if (!isUndefined(options.host)) {
+         var pattern =/[a-zA-Z0-9]+\.iot\.([a-z]+-[a-z]+-[0-9]+)\.amazonaws\.com/;
+         var region = pattern.exec(options.host);
+         if (region === null) {
+            console.log('Host endpoint is not valid');
+            throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
+         } else {
+            options.region = region[1];
+         }
       }
       // AWS Access Key ID and AWS Secret Key must be defined
       if (isUndefined(awsAccessId) || (isUndefined(awsSecretKey))) {
@@ -443,6 +492,13 @@ function DeviceClient(options) {
    protocols.mqtts = require('./lib/tls');
    protocols.wss = require('./lib/ws');
 
+   function _loadDefaultFilename() {
+      var home = process.env.HOME ||
+           process.env.USERPROFILE || 
+           (process.env.HOMEPATH ? ((process.env.HOMEDRIVE || 'C:/') + process.env.HOMEPATH) : null);
+      return path.join(home, '.aws', 'credentials');
+
+   }
    function _addToSubscriptionCache(topic, options) {
       var matches = activeSubscriptions.filter(function(element) {
          return element.topic === topic;
@@ -521,7 +577,7 @@ function DeviceClient(options) {
       return protocols[options.protocol](client, options);
    }
 
-   const device = new mqtt.MqttClient(_wrapper, options);
+   var device = new mqtt.MqttClient(_wrapper, options);
 
    //handle events from the mqtt client
 
@@ -730,7 +786,7 @@ function DeviceClient(options) {
             device.subscribe(topics, options, callback);
          } else {
             device.subscribe(topics, options);
-         }
+         } 
       } else {
          // we're offline - queue this subscription request
          if (offlineSubscriptionQueue.length < offlineSubscriptionQueueMaxSize) {

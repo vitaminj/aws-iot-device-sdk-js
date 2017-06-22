@@ -93,7 +93,7 @@ describe( "device class unit tests", function() {
                certPath:'test/data/certificate.pem.crt',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -110,47 +110,14 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key', 
                certPath:'test/data/certificate.pem.crt', 
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
       });
    });
-   describe( "device is instantiated with no region", function() {
-//
-// Verify that the device module throws an exception when there is
-// no valid region
-//
-      it("throws an exception", function() { 
-         assert.throws( function( err ) { 
-            var device = deviceModule( { 
-               certPath:'test/data/certificate.pem.crt', 
-               keyPath:'test/data/private.pem.key', 
-               caPath:'test/data/root-CA.crt',
-               clientId:'dummy-client-1',
-               } );
-            }, function(err) { console.log('\t['+err+']'); return true;}
-            ); 
-      });
-   });
-   describe( "device is instantiated with no region but has a host", function() {
-//
-// Verify that the device module does not throw exception when there is
-// no valid region if a host URL is supplied.
-//
-      it("does not throw an exception", function() { 
-         assert.doesNotThrow( function( err ) { 
-            var device = deviceModule( { 
-               certPath:'test/data/certificate.pem.crt', 
-               keyPath:'test/data/private.pem.key', 
-               caPath:'test/data/root-CA.crt',
-               clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com'
-               } );
-            }, function(err) { console.log('\t['+err+']'); return true;}
-	    ); 
-      });
-   });
+
+
    describe( "device is instantiated with no client certificate", function() {
 //
 // Verify that the device module throws an exception when there is
@@ -162,7 +129,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -170,8 +137,8 @@ describe( "device class unit tests", function() {
    });
    describe( "device is instantiated with invalid key path", function() {
 //
-// Verify that the device module doesn't throw an exception when all 
-// parameters are specified correctly.
+// Verify that the device module throws an exception when key is not valid. 
+// 
 //
       it("throws an exception", function() { 
          assert.throws( function( err ) { 
@@ -180,7 +147,7 @@ describe( "device class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -188,8 +155,8 @@ describe( "device class unit tests", function() {
    });
    describe( "device is instantiated with invalid cert path", function() {
 //
-// Verify that the device module doesn't throw an exception when all 
-// parameters are specified correctly.
+// Verify that the device module throws an exception when certificate is not valid.
+// 
 //
       it("throws an exception", function() { 
          assert.throws( function( err ) { 
@@ -198,7 +165,7 @@ describe( "device class unit tests", function() {
                certPath:'test/data/certificate.pem.crt-1', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -206,8 +173,8 @@ describe( "device class unit tests", function() {
    });
    describe( "device is instantiated with invalid CA path", function() {
 //
-// Verify that the device module doesn't throw an exception when all 
-// parameters are specified correctly.
+// Verify that the device module throws an exception when CA is not valid.
+// 
 //
       it("throws an exception", function() { 
          assert.throws( function( err ) { 
@@ -216,7 +183,7 @@ describe( "device class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt-1',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -234,7 +201,7 @@ describe( "device class unit tests", function() {
                certPath:'test/data/certificate.pem.crt', 
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                }  );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -258,7 +225,7 @@ describe( "device class unit tests", function() {
                privateKey: buffers.privateKey,
                caCert:buffers.rootCA,
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -282,7 +249,7 @@ describe( "device class unit tests", function() {
                privateKey: buffers.privateKey,
                caCert:buffers.rootCA,
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -305,7 +272,7 @@ describe( "device class unit tests", function() {
                privateKey: 'test/data/private.pem.key',
                caCert:buffers.rootCA,
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -324,7 +291,7 @@ describe( "device class unit tests", function() {
                privateKey: 'test/data/private.pem.key',
                caCert: 'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -343,7 +310,7 @@ describe( "device class unit tests", function() {
                privateKey: 'test/data/private.pem.key',
                caCert: 'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -362,7 +329,7 @@ describe( "device class unit tests", function() {
                privateKey: { },
                caCert: 'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -381,7 +348,7 @@ describe( "device class unit tests", function() {
                privateKey: 'test/data/private.pem.key',
                caCert: { },
                clientId:'dummy-client-1',
-               region:'us-east-1'
+               host:'XXXX.iot.us-east-1.amazonaws.com'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
@@ -398,18 +365,81 @@ describe( "device class unit tests", function() {
          delete process.env.AWS_SECRET_ACCESS_KEY;
 
          assert.throws( function( err ) { 
-            var device = deviceModule( { 
-               region:'us-east-1',
-               protocol: 'wss'
+            var device = deviceModule( {
+               host:'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss',
+               filename: ''
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
       });
    });
-   describe( "device throws an exception if using websocket protocol with no region specified", function() {
+   describe( "device throws an exception if using websocket protocol with invalid credential files", function() {
+//
+// Verify that the device module throws an exception when incorrectly
+// configured for websocket operation.
+//
+      it("throws exception", function() { 
+
+         delete process.env.AWS_ACCESS_KEY_ID;
+         delete process.env.AWS_SECRET_ACCESS_KEY;
+
+         assert.throws( function( err ) { 
+            var device = deviceModule( {
+               host:'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss',
+               filename: './test/data/invalid_credentials'
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+   });
+   describe( "device not throw an exception if using websocket protocol with filename specified in options", function() {
+//
+// Verify that the device module does not throw an exception when loading
+// credentials from credential file// 
+//
+      it("does not throws exception", function() { 
+
+         delete process.env.AWS_ACCESS_KEY_ID;
+         delete process.env.AWS_SECRET_ACCESS_KEY;
+
+         assert.doesNotThrow( function( err ) { 
+            var device = deviceModule( {
+               host:'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss',
+               filename: './test/data/credentials'
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+   });
+
+   describe( "device not throw an exception if using websocket protocol with filename specified in options as well as set in environment", function() {
+//
+// Verify that the device module does not throw an exception when provided
+// both options and environment variables 
+// 
+//
+      it("does not throws exception", function() { 
+
+         process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
+         process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
+
+         assert.doesNotThrow( function( err ) { 
+            var device = deviceModule( {
+               host:'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss',
+               filename: './test/data/credentials'
+               } );
+            }, function(err) { console.log('\t['+err+']'); return true;}
+            ); 
+      });
+   });
+   describe( "device throws an exception if using websocket protocol with no host specified", function() {
 //
 // Verify that the device module throws an exception when configured for
-// websocket operation with no region specified.
+// websocket operation with no host specified.
 //
       it("throws exception", function() { 
 
@@ -423,17 +453,19 @@ describe( "device class unit tests", function() {
             }, function(err) { console.log('\t['+err+']'); return true;}
             ); 
       });
+   });
+   describe( "device throws an exception if using websocket protocol with incorrect host specified", function() {
 //
 // Verify that the device module throws an exception when configured for
-// websocket operation with a host but no region specified.
+// websocket operation with incorrect host specified.
 //
       it("throws exception", function() { 
 
          assert.throws( function( err ) { 
             process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
             process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
-            var device = deviceModule( { 
-               host: 'not-a-valid-host.com',
+            var device = deviceModule( {
+               host:'not-a-valid-host.com', 
                protocol: 'wss',
                debug: true
                } );
@@ -441,6 +473,7 @@ describe( "device class unit tests", function() {
             ); 
       });
    });
+
    describe( "device does not throw exception if using websocket protocol with IAM credentials in environment", function() {
 //
 // Verify that the device module will not throw an exception when correctly
@@ -452,7 +485,7 @@ describe( "device class unit tests", function() {
             process.env.AWS_ACCESS_KEY_ID='not a valid access key id';
             process.env.AWS_SECRET_ACCESS_KEY='not a valid secret access key';
             var device = deviceModule( { 
-               region:'us-east-1',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                protocol: 'wss',
                debug: true
                } );
@@ -469,7 +502,7 @@ describe( "device class unit tests", function() {
 
          assert.doesNotThrow( function( err ) {
             var device = deviceModule( { 
-               region:'us-east-1',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                protocol: 'wss',
                debug: true,
                accessKeyId: 'not a valid access key id',
@@ -489,7 +522,7 @@ describe( "device class unit tests", function() {
 
          assert.doesNotThrow( function( err ) {
 
-            deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key',
+            deviceModule.prepareWebSocketUrl( { host:'XXXX.iot.us-east-1.amazonaws.com', debug: true }, 'not a valid access key',
                                         'not a valid secret access key' );
             }, function(err) { console.log('\t['+err+']'); return true;}
             );
@@ -503,7 +536,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:-1
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -518,7 +551,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:500
                } );
@@ -534,7 +567,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:500
@@ -551,7 +584,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:5000
@@ -580,7 +613,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:baseReconnectTimeMs,
                minimumConnectionTimeMs:minimumConnectionTimeMs,
                maximumReconnectTimeMs:maximumReconnectTimeMs
@@ -667,7 +700,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:128000
@@ -747,7 +780,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:128000
@@ -781,7 +814,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -842,7 +875,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -878,7 +911,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -923,7 +956,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -962,7 +995,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1006,7 +1039,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1094,7 +1127,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1155,7 +1188,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1215,7 +1248,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1295,7 +1328,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                baseReconnectTimeMs:1000,
                minimumConnectionTimeMs:20000,
                maximumReconnectTimeMs:128000,
@@ -1361,7 +1394,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                offlineQueueMaxSize:-1
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -1376,7 +1409,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                offlineQueueDropBehavior:'bogus'
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
@@ -1391,7 +1424,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:1000,
                minimumConnectionTimeMs:500
                } );
@@ -1407,7 +1440,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:500
@@ -1424,7 +1457,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:5000
@@ -1453,7 +1486,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:baseReconnectTimeMs,
                minimumConnectionTimeMs:minimumConnectionTimeMs,
                maximumReconnectTimeMs:maximumReconnectTimeMs
@@ -1540,7 +1573,7 @@ describe( "device class unit tests", function() {
                keyPath:'test/data/private.pem.key',
                caPath:'test/data/root-CA.crt',
                clientId:'dummy-client-1',
-               host:'https://data.iot.us-east-1.amazonaws.com',
+               host:'XXXX.iot.us-east-1.amazonaws.com',
                reconnectPeriod:1000,
                minimumConnectionTimeMs:2500,
                maximumReconnectTimeMs:128000

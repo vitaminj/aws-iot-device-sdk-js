@@ -44,7 +44,6 @@ module.exports = function(description, args, processFunction, argumentHelp) {
       }
       console.log('\n' + progName + ': ' + description + '\n\n' +
          ' Options\n\n' +
-         '  -g, --aws-region=REGION          AWS IoT region\n' +
          '  -i, --client-id=ID               use ID as client ID\n' +
          '  -H, --host-name=HOST             connect to HOST (overrides --aws-region)\n' +
          '  -p, --port=PORT                  connect to PORT (overrides defaults)\n' +
@@ -61,7 +60,6 @@ module.exports = function(description, args, processFunction, argumentHelp) {
          '  -d, --delay-ms=VALUE             delay in milliseconds before publishing\n' +
          '  -D, --debug                      print additional debugging information\n\n' +
          ' Default values\n\n' +
-         '  aws-region                       us-east-1\n' +
          '  client-id                        $USER<random-integer>\n' +
          '  protocol                         mqtts\n' +
          '  private-key                      private.pem.key\n' +
@@ -75,7 +73,7 @@ module.exports = function(description, args, processFunction, argumentHelp) {
       }
    };
    args = minimist(args, {
-      string: ['certificate-dir', 'aws-region', 'private-key', 'client-certificate',
+      string: ['certificate-dir', 'private-key', 'client-certificate',
          'ca-certificate', 'client-id', 'thing-name', 'configuration-file',
          'host-name', 'protocol'
       ],
@@ -84,7 +82,6 @@ module.exports = function(description, args, processFunction, argumentHelp) {
       ],
       boolean: ['help', 'debug'],
       alias: {
-         region: ['g', 'aws-region'],
          clientId: ['i', 'client-id'],
          privateKey: ['k', 'private-key'],
          clientCert: ['c', 'client-certificate'],
@@ -103,7 +100,6 @@ module.exports = function(description, args, processFunction, argumentHelp) {
          help: 'h'
       },
       default: {
-         region: 'us-east-1',
          protocol: 'mqtts',
          clientId: clientIdDefault,
          privateKey: 'private.pem.key',

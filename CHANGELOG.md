@@ -1,3 +1,20 @@
+## [2.0.0](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.0) (Mar 21, 2017)
+
+API Changes
+  - Deprecated region option(-g) in device configuration.
+  - Added host endpoint option(-H) to connect to custom host endpoint 
+
+Features
+  - Added support for browserify on Windows CMD. [#74](https://github.com/aws/aws-iot-device-sdk-js/issues/74)
+  - Added support for loading IAM credentials from aws credential files.
+  - Added sample for using Node.js SDK with webpack.
+
+Bugfixes/Imporovements
+  - Fixed README.md typo [#101](https://github.com/aws/aws-iot-device-sdk-js/issues/101)
+  - Fixed thing.register() API to have independent optional parameters.[#106](https://github.com/aws/aws-iot-device-sdk-js/issues/106) 
+  - Upgrade MQTT.js to v2.2.1 and gulp dependencies. 
+  - Fixed npm test failure in node version above 4. 
+
 ## [1.0.14](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v1.0.14) (Dec 7, 2016)
 
 Bugfixes/Improvements

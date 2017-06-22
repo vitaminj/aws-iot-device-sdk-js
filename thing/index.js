@@ -14,14 +14,14 @@
  */
 
 //node.js deps
-const events = require('events');
-const inherits = require('util').inherits;
+var events = require('events');
+var inherits = require('util').inherits;
 
 //npm deps
 
 //app deps
-const deviceModule = require('../device');
-const isUndefined = require('../common/lib/is-undefined');
+var deviceModule = require('../device');
+var isUndefined = require('../common/lib/is-undefined');
 
 //
 // private functions
@@ -120,7 +120,7 @@ function ThingShadowsClient(deviceOptions, thingShadowOptions) {
    //
    // Instantiate the device.
    //
-   const device = deviceModule.DeviceClient(deviceOptions);
+   var device = deviceModule.DeviceClient(deviceOptions);
 
    if (!isUndefined(thingShadowOptions)) {
       if (!isUndefined(thingShadowOptions.operationTimeout)) {
@@ -170,23 +170,23 @@ function ThingShadowsClient(deviceOptions, thingShadowOptions) {
                //
                // Check to see if we got all topic subscriptions granted.
                //
-               var failedTopics = [];
-               for (var k = 0, grantedLen = granted.length; k < grantedLen; k++) {
-                  //
-                  // 128 is 0x80 - Failure from the MQTT lib.
-                  //
-                  if (granted[k].qos === 128) {
-                     failedTopics.push(granted[k]);
-                  }
-               }
+              var failedTopics = [];
+              for (var k = 0, grantedLen = granted.length; k < grantedLen; k++) {
+                 //
+                 // 128 is 0x80 - Failure from the MQTT lib.
+                 //
+                 if (granted[k].qos === 128) {
+                    failedTopics.push(granted[k]);
+                 }
+              }
 
-               if (failedTopics.length > 0) {
-                  callback('Not all subscriptions were granted', failedTopics);
-                  return;
-               }
+              if (failedTopics.length > 0) {
+                 callback('Not all subscriptions were granted', failedTopics);
+                 return;
+              }
 
-               // all subscriptions were granted
-               callback();
+              // all subscriptions were granted
+              callback();
             }
          });
       } else {
@@ -525,6 +525,7 @@ function ThingShadowsClient(deviceOptions, thingShadowOptions) {
    };
 
    this.register = function(thingName, options, callback) {
+
       if (!thingShadows.hasOwnProperty(thingName)) {
          //
          // Initialize the registration entry for this thing; because the version # is 
@@ -541,7 +542,10 @@ function ThingShadowsClient(deviceOptions, thingShadowOptions) {
             qos: 0,
             pending: true
          };
-
+         if (typeof options === 'function') {
+            callback = options;
+            options = null;
+         }
          if (!isUndefined(options)) {
             if (!isUndefined(options.ignoreDeltas)) {
                ignoreDeltas = options.ignoreDeltas;

@@ -51,6 +51,10 @@ const shadows = AWSIoTData.thingShadow({
    //
    region: AWS.config.region,
    //
+   //Set the AWS IoT Host Endpoint
+   //     
+   host:AWSConfiguration.host,
+   //
    // Use a random client ID.
    //
    clientId: 'temperature-control-browser-' + (Math.floor((Math.random() * 100000) + 1)),
