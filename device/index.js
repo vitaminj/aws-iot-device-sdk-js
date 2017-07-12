@@ -454,7 +454,7 @@ function DeviceClient(options) {
             }
       }
       if (!isUndefined(options.host)) {
-         var pattern =/[a-zA-Z0-9]+\.iot\.([a-z]+-[a-z]+-[0-9]+)\.amazonaws\.com/;
+         var pattern =/[a-zA-Z0-9]+\.iot\.([a-z]+-[a-z]+-[0-9]+)\.amazonaws\..+/;
          var region = pattern.exec(options.host);
          if (region === null) {
             console.log('Host endpoint is not valid');

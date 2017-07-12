@@ -1,3 +1,8 @@
+## [2.0.1](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.1) (Jul 2, 2017)
+
+Bugfixes/Imporovements
+  - Removed validation against .com in websocket connection.
+
 ## [2.0.0](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.0) (Mar 21, 2017)
 
 API Changes
