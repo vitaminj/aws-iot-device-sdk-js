@@ -1,3 +1,14 @@
+## [2.1.0](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.1) (Sep 28, 2017)
+
+Features
+  - Update MQTT.js to 2.13.0. [MQTT.js](https://github.com/mqttjs/MQTT.js/releases/tag/v2.13.0)
+
+Bugfixes/Imporovements
+  - Propagated 'error' from 'close' event. [#131](https://github.com/aws/aws-iot-device-sdk-js/pull/131)
+  - Fixed method of handleMessage to be overridden rather than pass-through. [#129](https://github.com/aws/aws-iot-device-sdk-js/pull/129)
+  - Pass 'connack' parameter in 'connect' event  [#99](https://github.com/aws/aws-iot-device-sdk-js/pull/99)
+  - Update iot service name to 'iotdevicegateway'
+
 ## [2.0.1](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.1) (Jul 2, 2017)
 
 Bugfixes/Imporovements

@@ -766,7 +766,7 @@ describe( "device class unit tests", function() {
 //
 // Verify that the end and handleMessage APIs are passed-through
 //
-    describe("Ensure that the end and handleMessage APIs are passed through", function() {
+    describe("Ensure that the end and handleMessage APIs are overriding", function() {
       var clock;
 
       before( function() { clock = sinon.useFakeTimers(); } );
@@ -788,10 +788,21 @@ describe( "device class unit tests", function() {
           mockMQTTClientObject.emit('connect');
           device.end( false, null );
           assert.equal(mockMQTTClientObject.commandCalled['end'], 1); // Called once
-          assert.equal(mockMQTTClientObject.commandCalled['handleMessage'], 0); // Not called yet
-          device.handleMessage( 'message', function() { console.log('callback'); } );
+          // simulate overriding handleMessage
+          var expectedPacket = { data: 'packet data' };
+          var calledOverride = 0;
+          var calledBack = 0;
+          device.handleMessage = function customHandleMessage(packet, callback) {
+            calledOverride++;
+            assert.deepEqual(packet, expectedPacket);
+            callback();
+          }
+          mockMQTTClientObject.handleMessage(expectedPacket, function() {
+            calledBack++;
+            assert.equal(calledOverride, 1);
+            assert.equal(calledBack, 1);
+          })
           assert.equal(mockMQTTClientObject.commandCalled['end'], 1); // Called once
-          assert.equal(mockMQTTClientObject.commandCalled['handleMessage'], 1); // Called once
         });
     });
 //
@@ -1617,7 +1628,7 @@ describe( "device class unit tests", function() {
       after( function() { clock.restore(); } );
 
       it("calculates the url correctly", function() {
-         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdata%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=2f5c6df9fea874125a491d9bc5cbfd30279fd124b029e1ab18b0e77e8369f55c';
+         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=9bf20395cff4912649c9eb4892e105035137ce350290025388584ebb33893098';
 
          var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key','not a valid secret access key' );
          assert.equal( url, expectedUrl );
@@ -1638,7 +1649,7 @@ describe( "device class unit tests", function() {
 
       it("calculates the url correctly", function() {
 
-         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdata%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=2f5c6df9fea874125a491d9bc5cbfd30279fd124b029e1ab18b0e77e8369f55c&X-Amz-Security-Token=not%2Fa%2Fvalid%2Fsession%20token';
+         const expectedUrl='wss://not-a-real-host.com/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=9bf20395cff4912649c9eb4892e105035137ce350290025388584ebb33893098&X-Amz-Security-Token=not%2Fa%2Fvalid%2Fsession%20token';
 
          var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', debug: true }, 'not a valid access key','not a valid secret access key', 'not/a/valid/session token' );
          assert.equal( url, expectedUrl );
@@ -1660,7 +1671,7 @@ describe( "device class unit tests", function() {
 
       it("calculates the url correctly", function() {
 
-         const expectedUrl='wss://not-a-real-host.com:9999/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdata%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=62077f12458301adfe2d7fbb4eb271a060f29fcd3b7bbc22a8979e063ffda5cc&X-Amz-Security-Token=not%2Fa%2Fvalid%2Fsession%20token';
+         const expectedUrl='wss://not-a-real-host.com:9999/mqtt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=not a valid access key%2F19861115%2Fundefined%2Fiotdevicegateway%2Faws4_request&X-Amz-Date=19861115T080000Z&X-Amz-SignedHeaders=host&X-Amz-Signature=ac89d55d95935fd1d59f44ad51f3fc35f4e79f5efc315f2f79f823a8f82dde4b&X-Amz-Security-Token=not%2Fa%2Fvalid%2Fsession%20token';
 
          var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', port: 9999, debug: true }, 'not a valid access key','not a valid secret access key', 'not/a/valid/session token' );
          assert.equal( url, expectedUrl );

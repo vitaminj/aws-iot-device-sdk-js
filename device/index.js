@@ -143,7 +143,7 @@ function prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken) {
    var now = getDateTimeString();
    var today = getDateString(now);
    var path = '/mqtt';
-   var awsServiceName = 'iotdata';
+   var awsServiceName = 'iotdevicegateway';
    var queryParams = 'X-Amz-Algorithm=AWS4-HMAC-SHA256' +
       '&X-Amz-Credential=' + awsAccessId + '%2F' + today + '%2F' + options.region + '%2F' + awsServiceName + '%2Faws4_request' +
       '&X-Amz-Date=' + now +
@@ -688,7 +688,7 @@ function DeviceClient(options) {
    // handled here, *and* propagated upwards.
    //
 
-   device.on('connect', function() {
+   device.on('connect', function(connack) {
       //
       // If not already running, start the connection timer.
       //
@@ -706,9 +706,12 @@ function DeviceClient(options) {
          drainingTimer = setInterval(_drainOperationQueue,
             drainTimeMs);
       }
-      that.emit('connect');
+      that.emit('connect', connack);
    });
-   device.on('close', function() {
+   device.on('close', function(err) {
+      if (!isUndefined(err)) {
+         that.emit('error', err);
+      }
       if ((!isUndefined(options)) && (options.debug === true)) {
          console.log('connection lost - will attempt reconnection in ' +
             device.options.reconnectPeriod / 1000 + ' seconds...');
@@ -748,7 +751,6 @@ function DeviceClient(options) {
    device.on('message', function(topic, message, packet) {
       that.emit('message', topic, message, packet);
    });
-
    //
    // The signatures of these methods *must* match those of the mqtt.js
    // client.
@@ -820,13 +822,13 @@ function DeviceClient(options) {
    this.end = function(force, callback) {
       device.end(force, callback);
    };
-   this.handleMessage = function(packet, callback) {
-      device.handleMessage(packet, callback);
+
+   this.handleMessage = device.handleMessage.bind(device);
+
+   device.handleMessage = function(packet, callback) {
+      that.handleMessage(packet, callback);
    };
-   //
-   // Call this function to update the credentials used when
-   // connecting via WebSocket/SigV4.
-   //
+
    this.updateWebSocketCredentials = function(accessKeyId, secretKey, sessionToken, expiration) {
       awsAccessId = accessKeyId;
       awsSecretKey = secretKey;

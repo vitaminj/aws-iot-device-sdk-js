@@ -93,7 +93,7 @@ device
     console.log('connect');
     device.subscribe('topic_1');
     device.publish('topic_2', JSON.stringify({ test_data: 1}));
-    });
+  });
 
 device
   .on('message', function(topic, payload) {
@@ -573,7 +573,7 @@ directory specified.  Default certificate/key file names are as follows:
 The '-f' (certificate directory) option can be combined with these so that
 you don't have to specify absolute pathnames for each file.
 
-<a href="configurationFile></a>
+<a href="configurationFile"></a>
 #### Use a configuration file
 
 The [AWS IoT Console](https://console.aws.amazon.com/iot) can generate JSON 
