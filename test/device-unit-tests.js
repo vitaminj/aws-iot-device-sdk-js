@@ -528,6 +528,48 @@ describe( "device class unit tests", function() {
             );
       });
    });
+   describe("device does not throw exception if using CustomAuth with valid headers", function () {
+      it("does not throw an exception", function () {
+         assert.doesNotThrow(function (err) {
+            var device = deviceModule({
+               host: 'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss-custom-auth',
+               customAuthHeaders: {
+                  'X-Amz-CustomAuthorizer-Name': 'AuthorizerFunctionName',
+                  'X-Amz-CustomAuthorizer-Signature': 'Signature',
+                  'NPAuthorizerToken': 'Token'
+               }
+            });
+         }, function (err) { console.log('\t[' + err + ']'); return true; }
+         );
+      });
+   });
+   describe("device throws exception if using CustomAuth over websocket without headers", function () {
+      it("throws exception", function () {
+         assert.throws(function (err) {
+            var device = deviceModule({
+               host: 'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss-custom-auth'
+            });
+         }, function (err) { console.log('\t[' + err + ']'); return true; }
+         );
+      });
+   });
+   describe("device does not throw exception if using CustomAuth over websocket with non-standard headers", function () {
+      it("does not throw an exception", function () {
+         assert.doesNotThrow(function (err) {
+            var device = deviceModule({
+               host: 'XXXX.iot.us-east-1.amazonaws.com',
+               protocol: 'wss-custom-auth',
+               customAuthHeaders: {
+                  'Custom-Header-1': 'Value1',
+                  'Custom-Header-2': 'Value2',
+               }
+            });
+         }, function (err) { console.log('\t[' + err + ']'); return true; }
+         );
+      });
+   });
    describe( "device doesn't accept invalid timing parameters: baseReconnectTimeMs<1", function() {
       it("throws an exception", function() {
          assert.throws( function( err ) {
@@ -591,6 +633,124 @@ describe( "device class unit tests", function() {
                } );
             }, function(err) { console.log('\t['+err+']'); return true;}
 	    );
+      });
+   });
+   describe( "device passes default keepalive time correctly", function(){
+      it("does not throw an exception", function() {
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+               certPath:'test/data/certificate.pem.crt',
+               keyPath:'test/data/private.pem.key',
+               caPath:'test/data/root-CA.crt',
+               clientId:'dummy-client-1',
+               host:'XXXX.iot.us-east-1.amazonaws.com'
+            });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].keepalive, 300);
+      });
+   });
+   describe( "device override default keepalive time when specified in options", function(){
+      it("does not throw an exception", function(){
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com',
+                  keepalive:600
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].keepalive, 600);
+      });
+   });
+   describe( "device passes default username in options correctly", function(){
+      it("does not throw an exception", function(){
+         var metricPrefix = "?SDK=JavaScript&Version=";
+         var pjson = require('../package.json');
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com'
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].username, metricPrefix + pjson.version);
+      });
+   });
+   describe( "device does not passes default username when metics is disabled", function(){
+      it("does not throw an exception", function(){
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com',
+                  enableMetrics:false
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].username, undefined);
+      });
+   });
+   describe( "Correct username is passed when user specified in options ", function(){
+      it("does not throw an exception", function(){
+         var metricPrefix = "?SDK=JavaScript&Version=";
+         var pjson = require('../package.json');
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com',
+                  username:'dummy-user-name'
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].username, 'dummy-user-name' + metricPrefix + pjson.version);
+      });
+   });
+   describe( "Username will be concatenated if customer enable metrics but also provide username ", function(){
+      it("does not throw an exception", function(){
+         var metricPrefix = "?SDK=JavaScript&Version=";
+         var pjson = require('../package.json');
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com',
+                  enableMetrics: true,
+                  username:'dummy-user-name'
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].username, 'dummy-user-name' + metricPrefix + pjson.version);
+      });
+   });
+   describe( "Username will be overriden if customer disable metrics but provide username ", function(){
+      it("does not throw an exception", function(){
+         assert.doesNotThrow( function( err ) {
+            var device = deviceModule( {
+                  certPath:'test/data/certificate.pem.crt',
+                  keyPath:'test/data/private.pem.key',
+                  caPath:'test/data/root-CA.crt',
+                  clientId:'dummy-client-1',
+                  host:'XXXX.iot.us-east-1.amazonaws.com',
+                  enableMetrics: false,
+                  username:'dummy-user-name'
+               });
+         }, function(err) { console.log('\t['+err+']'); return true;}
+         );
+         assert.equal(mqttSave.firstCall.args[1].username, 'dummy-user-name');
       });
    });
    describe( "device handles reconnect timing correctly", function() {
@@ -712,12 +872,16 @@ describe( "device class unit tests", function() {
           var fakeCallback4 = sinon.spy();
           var fakeCallback5 = sinon.spy();
           var fakeCallback6 = sinon.spy();
+          var fakeCallback7 = sinon.spy();
+          var fakeCallback8 = sinon.spy();
           device.on('connect', fakeCallback1);
           device.on('close', fakeCallback2);
           device.on('reconnect', fakeCallback3);
           device.on('offline', fakeCallback4);
           device.on('error', fakeCallback5);
           device.on('message', fakeCallback6);
+          device.on('packetsend', fakeCallback7);
+          device.on('packetreceive', fakeCallback8);
           // Now emit messages
           mockMQTTClientObject.emit('connect');
           assert(fakeCallback1.calledOnce);
@@ -726,6 +890,8 @@ describe( "device class unit tests", function() {
           sinon.assert.notCalled(fakeCallback4);
           sinon.assert.notCalled(fakeCallback5);
           sinon.assert.notCalled(fakeCallback6);
+          sinon.assert.notCalled(fakeCallback7);
+          sinon.assert.notCalled(fakeCallback8);
           mockMQTTClientObject.emit('close');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
@@ -733,6 +899,8 @@ describe( "device class unit tests", function() {
           sinon.assert.notCalled(fakeCallback4);
           sinon.assert.notCalled(fakeCallback5);
           sinon.assert.notCalled(fakeCallback6);
+          sinon.assert.notCalled(fakeCallback7);
+          sinon.assert.notCalled(fakeCallback8);
           mockMQTTClientObject.emit('reconnect');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
@@ -740,6 +908,8 @@ describe( "device class unit tests", function() {
           sinon.assert.notCalled(fakeCallback4);
           sinon.assert.notCalled(fakeCallback5);
           sinon.assert.notCalled(fakeCallback6);
+          sinon.assert.notCalled(fakeCallback7);
+          sinon.assert.notCalled(fakeCallback8);
           mockMQTTClientObject.emit('offline');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
@@ -747,6 +917,8 @@ describe( "device class unit tests", function() {
           assert(fakeCallback4.calledOnce);
           sinon.assert.notCalled(fakeCallback5);
           sinon.assert.notCalled(fakeCallback6);
+          sinon.assert.notCalled(fakeCallback7);
+          sinon.assert.notCalled(fakeCallback8);
           mockMQTTClientObject.emit('error');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
@@ -754,6 +926,26 @@ describe( "device class unit tests", function() {
           assert(fakeCallback4.calledOnce);
           assert(fakeCallback5.calledOnce);
           sinon.assert.notCalled(fakeCallback6);
+          sinon.assert.notCalled(fakeCallback7);
+          sinon.assert.notCalled(fakeCallback8);
+          mockMQTTClientObject.emit('packetsend');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+          sinon.assert.notCalled(fakeCallback6);
+          assert(fakeCallback7.calledOnce);
+          sinon.assert.notCalled(fakeCallback8);
+          mockMQTTClientObject.emit('packetreceive');
+          assert(fakeCallback1.calledOnce);
+          assert(fakeCallback2.calledOnce);
+          assert(fakeCallback3.calledOnce);
+          assert(fakeCallback4.calledOnce);
+          assert(fakeCallback5.calledOnce);
+          sinon.assert.notCalled(fakeCallback6);
+          assert(fakeCallback7.calledOnce);
+          assert(fakeCallback8.calledOnce);
           mockMQTTClientObject.emit('message');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
@@ -761,6 +953,8 @@ describe( "device class unit tests", function() {
           assert(fakeCallback4.calledOnce);
           assert(fakeCallback5.calledOnce);
           assert(fakeCallback6.calledOnce);
+          assert(fakeCallback7.calledOnce);
+          assert(fakeCallback8.calledOnce);
         });
     });
 //
@@ -1595,22 +1789,30 @@ describe( "device class unit tests", function() {
           var fakeCallback3 = sinon.spy();
           var fakeCallback4 = sinon.spy();
           var fakeCallback5 = sinon.spy();
+          var fakeCallback6 = sinon.spy();
+          var fakeCallback7 = sinon.spy();
           device.on('connect', fakeCallback1);
           device.on('close', fakeCallback2);
           device.on('reconnect', fakeCallback3);
           device.on('offline', fakeCallback4);
           device.on('error', fakeCallback5);
+          device.on('packetsend', fakeCallback6);
+          device.on('packetreceive', fakeCallback7);
           // Now emit messages
           mockMQTTClientObject.emit('connect');
           mockMQTTClientObject.emit('close');
           mockMQTTClientObject.emit('reconnect');
           mockMQTTClientObject.emit('offline');
           mockMQTTClientObject.emit('error');
+          mockMQTTClientObject.emit('packetsend');
+          mockMQTTClientObject.emit('packetreceive');
           assert(fakeCallback1.calledOnce);
           assert(fakeCallback2.calledOnce);
           assert(fakeCallback3.calledOnce);
           assert(fakeCallback4.calledOnce);
           assert(fakeCallback5.calledOnce);
+          assert(fakeCallback6.calledOnce);
+          assert(fakeCallback7.calledOnce);
         });
     });
    describe( "websocket protocol URL is prepared correctly when session token is not present", function() {
@@ -1676,5 +1878,28 @@ describe( "device class unit tests", function() {
          var url = deviceModule.prepareWebSocketUrl( { host:'not-a-real-host.com', port: 9999, debug: true }, 'not a valid access key','not a valid secret access key', 'not/a/valid/session token' );
          assert.equal( url, expectedUrl );
       });
+   });
+   describe("CustomAuth websocket url is correctly generated", function() {
+      it("generates the correct url", function() {
+         const expectedUrl = 'wss://not-a-real-host.com/mqtt';
+         var url = deviceModule.prepareWebSocketCustomAuthUrl( { host:'not-a-real-host.com' } );
+         assert.equal( url, expectedUrl );
+      });
+   });
+   describe("websocket headers are correctly set when CustomAuth headers are specified", function() {
+      it("sets the websocket headers correctly", function() {
+         var headers = {
+            'X-Amz-CustomAuthorizer-Name': 'AuthorizerFunctionName',
+            'X-Amz-CustomAuthorizer-Signature': 'Signature',
+            'NPAuthorizerToken': 'Token'
+         };
+         var device = deviceModule({
+            host: 'XXXX.iot.us-east-1.amazonaws.com',
+            protocol: 'wss-custom-auth',
+            customAuthHeaders: headers
+         });
+         assert.equal( headers, device.getWebsocketHeaders() );
+      });
+      
    });
 });

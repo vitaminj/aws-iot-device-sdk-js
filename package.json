@@ -1,7 +1,7 @@
 {
   "name": "aws-iot-device-sdk",
   "description": "AWS IoT Node.js SDK for Embedded Devices",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": {
     "name": "Amazon Web Services",
     "email": "",
@@ -28,9 +28,9 @@
     "mqtt"
   ],
   "dependencies": {
-    "mqtt": "2.13.0",
+    "mqtt": "2.14.0",
     "minimist": "1.2.0",
-    "websocket-stream": "^3.3.3",
+    "websocket-stream": "^5.0.1",
     "crypto-js": "3.1.6"
   },
   "devDependencies": {

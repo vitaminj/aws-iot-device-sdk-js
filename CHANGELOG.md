@@ -1,3 +1,17 @@
+## [2.2.0](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.2.0) (Nov 29, 2017)
+
+Features
+  - Added AWS IoT Job API
+  - Added options to enable AWS IoT Custom Auth
+  - Added options to enalbe/disable AWS IoT metrics collection
+  - Added new API to support packetsend and packetreceive events
+
+Bugfixes/Imporovements
+  - Modify Keepalive defaults to 300 secs to maintain consistency across SDKs
+  - Expose shadow version from raw json object
+  - Added samples to demonstrate AWS IoT Job API
+  - Disabled MQTT.js default resubscribe. 
+
 ## [2.1.0](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.0.1) (Sep 28, 2017)
 
 Features
