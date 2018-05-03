@@ -25,9 +25,7 @@ var sha256 = require('crypto-js/sha256');
 //app deps
 var exceptions = require('./lib/exceptions');
 var isUndefined = require('../common/lib/is-undefined');
-var tlsReader = require('../common/lib/tls-reader');
 var path = require('path');
-var fs = require('fs');
 
 //begin module
 function makeTwoDigits(n) {
@@ -439,22 +437,14 @@ function DeviceClient(options) {
 
    // set protocol, do not override existing definitions if available
    if (isUndefined(options.protocol)) {
-      options.protocol = 'mqtts';
+      options.protocol = 'wss';
    }
 
    if (isUndefined(options.host)) {
       throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
    }
 
-   if (options.protocol === 'mqtts') {
-      // set port, do not override existing definitions if available
-      if (isUndefined(options.port)) {
-         options.port = 8883;
-      }
-
-      //read and map certificates
-      tlsReader(options);
-   } else if (options.protocol === 'wss' || options.protocol === 'wss-custom-auth') {
+   if (options.protocol === 'wss' || options.protocol === 'wss-custom-auth') {
       if (options.protocol === 'wss') {
          //
          // AWS access id and secret key 
@@ -475,25 +465,7 @@ function DeviceClient(options) {
          } else {
             awsSTSToken = process.env.AWS_SESSION_TOKEN;
          }
-         if (isUndefined(awsAccessId) || isUndefined(awsSecretKey)) {
-            var filename;
-            try {
-               if (!isUndefined(options.filename)) {
-                  filename = options.filename;
-               } else {
-                  filename = _loadDefaultFilename();
-               }
-               var user_profile = options.profile || process.env.AWS_PROFILE || 'default';
-               var creds = getCredentials(fs.readFileSync(filename, 'utf-8'));
-               var profile = creds[user_profile];
-               awsAccessId = profile.aws_access_key_id;
-               awsSecretKey = profile.aws_secret_access_key;
-               awsSTSToken = profile.aws_session_token;
-            } catch (e) {
-               console.log(e);
-               console.log('Failed to read credentials from ' + filename);
-            }
-         }
+
          // AWS Access Key ID and AWS Secret Key must be defined
          if (isUndefined(awsAccessId) || (isUndefined(awsSecretKey))) {
             console.log('To connect via WebSocket/SigV4, AWS Access Key ID and AWS Secret Key must be passed either in options or as environment variables; see README.md');
@@ -541,16 +513,8 @@ function DeviceClient(options) {
    //connect and return the client instance to map all mqttjs apis
 
    var protocols = {};
-   protocols.mqtts = require('./lib/tls');
    protocols.wss = require('./lib/ws');
 
-   function _loadDefaultFilename() {
-      var home = process.env.HOME ||
-           process.env.USERPROFILE || 
-           (process.env.HOMEPATH ? ((process.env.HOMEDRIVE || 'C:/') + process.env.HOMEPATH) : null);
-      return path.join(home, '.aws', 'credentials');
-
-   }
    function _addToSubscriptionCache(topic, options) {
       var matches = activeSubscriptions.filter(function(element) {
          return element.topic === topic;
