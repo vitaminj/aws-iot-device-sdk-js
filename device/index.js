@@ -19,7 +19,6 @@ var inherits = require('util').inherits;
 
 //npm deps
 var mqtt = require('mqtt');
-var crypto = require('crypto-js');
 
 //app deps
 var exceptions = require('./lib/exceptions');
@@ -27,178 +26,6 @@ var isUndefined = require('../common/lib/is-undefined');
 var path = require('path');
 
 //begin module
-function makeTwoDigits(n) {
-   if (n > 9) {
-      return n;
-   } else {
-      return '0' + n;
-   }
-}
-
-function getDateTimeString() {
-   var d = new Date();
-
-   //
-   // The additional ''s are used to force JavaScript to interpret the
-   // '+' operator as string concatenation rather than arithmetic.
-   //
-   return d.getUTCFullYear() + '' +
-      makeTwoDigits(d.getUTCMonth() + 1) + '' +
-      makeTwoDigits(d.getUTCDate()) + 'T' + '' +
-      makeTwoDigits(d.getUTCHours()) + '' +
-      makeTwoDigits(d.getUTCMinutes()) + '' +
-      makeTwoDigits(d.getUTCSeconds()) + 'Z';
-}
-
-function getDateString(dateTimeString) {
-   return dateTimeString.substring(0, dateTimeString.indexOf('T'));
-}
-
-function getSignatureKey(key, dateStamp, regionName, serviceName) {
-   var kDate = crypto.HmacSHA256(dateStamp, 'AWS4' + key, {
-      asBytes: true
-   });
-   var kRegion = crypto.HmacSHA256(regionName, kDate, {
-      asBytes: true
-   });
-   var kService = crypto.HmacSHA256(serviceName, kRegion, {
-      asBytes: true
-   });
-   var kSigning = crypto.HmacSHA256('aws4_request', kService, {
-      asBytes: true
-   });
-   return kSigning;
-}
-
-function signUrl(method, scheme, hostname, path, queryParams, accessId, secretKey,
-   region, serviceName, payload, today, now, debug, awsSTSToken) {
-
-   var signedHeaders = 'host';
-
-   var canonicalHeaders = 'host:' + hostname.toLowerCase() + '\n';
-
-   var canonicalRequest = method + '\n' + // method
-      path + '\n' + // path
-      queryParams + '\n' + // query params
-      canonicalHeaders + // headers
-      '\n' + // required
-      signedHeaders + '\n' + // signed header list
-      crypto.SHA256(payload, {
-         asBytes: true
-      }); // hash of payload (empty string)
-
-   if (debug === true) {
-      console.log('canonical request: ' + canonicalRequest + '\n');
-   }
-
-   var hashedCanonicalRequest = crypto.SHA256(canonicalRequest, {
-      asBytes: true
-   });
-
-   if (debug === true) {
-      console.log('hashed canonical request: ' + hashedCanonicalRequest + '\n');
-   }
-
-   var stringToSign = 'AWS4-HMAC-SHA256\n' +
-      now + '\n' +
-      today + '/' + region + '/' + serviceName + '/aws4_request\n' +
-      hashedCanonicalRequest;
-
-   if (debug === true) {
-      console.log('string to sign: ' + stringToSign + '\n');
-   }
-
-   var signingKey = getSignatureKey(secretKey, today, region, serviceName);
-
-   if (debug === true) {
-      console.log('signing key: ' + signingKey + '\n');
-   }
-
-   var signature = crypto.HmacSHA256(stringToSign, signingKey, {
-      asBytes: true
-   });
-
-   if (debug === true) {
-      console.log('signature: ' + signature + '\n');
-   }
-
-   var finalParams = queryParams + '&X-Amz-Signature=' + signature;
-
-   if (!isUndefined(awsSTSToken)) {
-      finalParams += '&X-Amz-Security-Token=' + encodeURIComponent(awsSTSToken);
-   }
-
-   var url = scheme + hostname + path + '?' + finalParams;
-
-   if (debug === true) {
-      console.log('url: ' + url + '\n');
-   }
-
-   return url;
-}
-
-function prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken) {
-   var now = getDateTimeString();
-   var today = getDateString(now);
-   var path = '/mqtt';
-   var awsServiceName = 'iotdevicegateway';
-   var queryParams = 'X-Amz-Algorithm=AWS4-HMAC-SHA256' +
-      '&X-Amz-Credential=' + awsAccessId + '%2F' + today + '%2F' + options.region + '%2F' + awsServiceName + '%2Faws4_request' +
-      '&X-Amz-Date=' + now +
-      '&X-Amz-SignedHeaders=host';
-   var hostName = options.host;
-
-   // Include the port number in the hostname if it's not 
-   // the standard wss port (443).
-   //
-   if (!isUndefined(options.port) && options.port !== 443) {
-      hostName = options.host + ':' + options.port;
-   }
-   return signUrl('GET', 'wss://', hostName, path, queryParams,
-      awsAccessId, awsSecretKey, options.region, awsServiceName, '', today, now, options.debug, awsSTSToken);
-}
-
-function prepareWebSocketCustomAuthUrl(options) {
-   var path = '/mqtt';
-   var hostName = options.host;
-
-   // Include the port number in the hostname if it's not 
-   // the standard wss port (443).
-   //
-   if (!isUndefined(options.port) && options.port !== 443) {
-      hostName = options.host + ':' + options.port;
-   }
-
-   return 'wss://' + hostName + path;
-}
-
-function arrayEach(array, iterFunction) {
-    for (var idx in array) {
-        if (Object.prototype.hasOwnProperty.call(array, idx)) {
-            iterFunction.call(this, array[idx], parseInt(idx, 10));
-        }
-    }
-}
-
-function getCredentials(ini) {
-    //Get shared credential function from AWS SDK.
-    var map = {};
-    var currentSection ={};
-    arrayEach(ini.split(/\r?\n/), function(line) {
-        line = line.split(/(^|\s)[;#]/)[0]; // remove comments
-        var section = line.match(/^\s*\[([^\[\]]+)\]\s*$/);
-        if (section) {
-          currentSection = section[1];
-        } else if (currentSection) {
-          var item = line.match(/^\s*(.+?)\s*=\s*(.+?)\s*$/);
-          if (item) {
-            map[currentSection] = map[currentSection] || {};
-            map[currentSection][item[1]] = item[2];
-          }
-        }
-    });
-    return map;
-}
 
 //
 // This method is the exposed module; it validates the mqtt options,
@@ -217,6 +44,10 @@ function DeviceClient(options) {
    // A copy of 'this' for use inside of closures
    //
    var that = this;
+
+   if (options.protocol !== 'wss-preauthd-url') {
+     throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
+   }
 
    //
    // Offline Operation
@@ -349,12 +180,6 @@ function DeviceClient(options) {
    var connectionTimer = null;
 
    //
-   // Credentials when authenticating via WebSocket/SigV4
-   //
-   var awsAccessId;
-   var awsSecretKey;
-   var awsSTSToken;
-   //
    // Validate options, set default reconnect period if not specified.
    //
    var metricPrefix = "?SDK=JavaScript&Version=";
@@ -434,76 +259,14 @@ function DeviceClient(options) {
       throw new Error(exceptions.INVALID_OFFLINE_QUEUEING_PARAMETERS);
    }
 
-   // set protocol, do not override existing definitions if available
-   if (isUndefined(options.protocol)) {
-      options.protocol = 'wss';
-   }
-
-   if (isUndefined(options.host)) {
+   if (isUndefined(options.url)) {
       throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
    }
 
-   if (options.protocol === 'wss' || options.protocol === 'wss-custom-auth') {
-      if (options.protocol === 'wss') {
-         //
-         // AWS access id and secret key 
-         // It first check Input options and Environment variables 
-         // If that not available, it will try to load credentials from default credential file
-         if (!isUndefined(options.accessKeyId)) {
-            awsAccessId = options.accessKeyId;
-         } else {
-            awsAccessId = process.env.AWS_ACCESS_KEY_ID;
-         }
-         if (!isUndefined(options.secretKey)) {
-            awsSecretKey = options.secretKey;
-         } else {
-            awsSecretKey = process.env.AWS_SECRET_ACCESS_KEY;
-         }
-         if (!isUndefined(options.sessionToken)) {
-            awsSTSToken = options.sessionToken;
-         } else {
-            awsSTSToken = process.env.AWS_SESSION_TOKEN;
-         }
-
-         // AWS Access Key ID and AWS Secret Key must be defined
-         if (isUndefined(awsAccessId) || (isUndefined(awsSecretKey))) {
-            console.log('To connect via WebSocket/SigV4, AWS Access Key ID and AWS Secret Key must be passed either in options or as environment variables; see README.md');
-            throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
-         }
-      } else {
-         if (isUndefined(options.customAuthHeaders)) {
-            console.log('To authenticate with a custom authorizer, you must provide the required HTTP headers; see README.md');
-            throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
-         }
-      }
-
-      if (!isUndefined(options.host) && isUndefined(options.region)) {
-         var pattern = /[a-zA-Z0-9]+\.iot\.([a-z]+-[a-z]+-[0-9]+)\.amazonaws\..+/;
-         var region = pattern.exec(options.host);
-         if (region === null) {
-            console.log('Host endpoint is not valid');
-            throw new Error(exceptions.INVALID_CONNECT_OPTIONS);
-         } else {
-            options.region = region[1];
-         }
-      }
-      // set port, do not override existing definitions if available
-      if (isUndefined(options.port)) {
-         options.port = 443;
-      }
-      // check websocketOptions and ensure that the protocol is defined
-      if (isUndefined(options.websocketOptions)) {
-         options.websocketOptions = {
-            protocol: 'mqttv3.1'
-         };
-      } else {
-         options.websocketOptions.protocol = 'mqttv3.1';
-      }
-
-      if (options.protocol === 'wss-custom-auth') {
-         options.websocketOptions.headers = options.customAuthHeaders;
-      }
-   } 
+   if (isUndefined(options.websocketOptions)) {
+      options.websocketOptions = {};
+   }
+   options.websocketOptions.protocol = 'mqttv3.1';
 
    if ((!isUndefined(options)) && (options.debug === true)) {
       console.log(options);
@@ -571,33 +334,11 @@ function DeviceClient(options) {
    }
 
    function _wrapper(client) {
-      var protocol = options.protocol;
-      if (protocol === 'wss') {
-         var url;
-         //
-         // If the access id and secret key are available, prepare the URL. 
-         // Otherwise, set the url to an invalid value.
-         //
-         if (awsAccessId === '' || awsSecretKey === '') {
-            url = 'wss://no-credentials-available';
-         } else {
-            url = prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken);
-         }
-
-         if (options.debug === true) {
-            console.log('using websockets, will connect to \'' + url + '\'...');
-         }
-
-         options.url = url;
-      } else if (protocol === 'wss-custom-auth') {
-         options.url = prepareWebSocketCustomAuthUrl(options);
-         if (options.debug === true) {
-            console.log('using websockets custom auth, will connect to \'' + options.url + '\'...');
-         }
-         // Treat the request as a standard websocket request from here onwards
-         protocol = 'wss';
+      if (options.debug === true) {
+         console.log('using websockets preauthd-url, will connect to \'' + options.url + '\'...');
       }
-      return protocols[protocol](client, options);
+      // Treat the request as a standard websocket request from here onwards
+      return protocols['wss'](client, options);
    }
 
    var device = new mqtt.MqttClient(_wrapper, options);
@@ -858,11 +599,6 @@ function DeviceClient(options) {
       that.handleMessage(packet, callback);
    };
 
-   this.updateWebSocketCredentials = function(accessKeyId, secretKey, sessionToken, expiration) {
-      awsAccessId = accessKeyId;
-      awsSecretKey = secretKey;
-      awsSTSToken = sessionToken;
-   };
    this.getWebsocketHeaders = function() {
       return options.websocketOptions.headers;
    };
@@ -888,9 +624,3 @@ inherits(DeviceClient, events.EventEmitter);
 
 module.exports = DeviceClient;
 module.exports.DeviceClient = DeviceClient;
-
-//
-// Exported for unit testing only
-//
-module.exports.prepareWebSocketUrl = prepareWebSocketUrl;
-module.exports.prepareWebSocketCustomAuthUrl = prepareWebSocketCustomAuthUrl;
