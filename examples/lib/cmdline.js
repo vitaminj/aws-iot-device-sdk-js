@@ -51,6 +51,7 @@ module.exports = function(description, args, processFunction, argumentHelp) {
          '  -k, --private-key=FILE           use FILE as private key\n' +
          '  -c, --client-certificate=FILE    use FILE as client certificate\n' +
          '  -a, --ca-certificate=FILE        use FILE as CA certificate\n' +
+         '  -s, --code-sign-certificate=FILE use FILE as code-sign certificate\n' +
          '  -f, --certificate-dir=DIR        look in DIR for certificates\n' +
          '  -F, --configuration-file=FILE    use FILE (JSON format) for configuration\n' +
          '  -r, --reconnect-period-ms=VALUE  use VALUE as the reconnect period (ms)\n' +
@@ -74,8 +75,8 @@ module.exports = function(description, args, processFunction, argumentHelp) {
    };
    args = minimist(args, {
       string: ['certificate-dir', 'private-key', 'client-certificate',
-         'ca-certificate', 'client-id', 'thing-name', 'configuration-file',
-         'host-name', 'protocol'
+         'ca-certificate', 'code-sign-certificate', 'client-id', 'thing-name',
+         'configuration-file', 'host-name', 'protocol'
       ],
       integer: ['reconnect-period-ms', 'test-mode', 'port', 'delay-ms',
          'keepalive'
@@ -86,6 +87,7 @@ module.exports = function(description, args, processFunction, argumentHelp) {
          privateKey: ['k', 'private-key'],
          clientCert: ['c', 'client-certificate'],
          caCert: ['a', 'ca-certificate'],
+         csCert: ['s', 'code-sign-certificate'],
          certDir: ['f', 'certificate-dir'],
          configFile: ['F', 'configuration-file'],
          baseReconnectTimeMs: ['r', 'reconnect-period-ms'],
@@ -132,6 +134,7 @@ module.exports = function(description, args, processFunction, argumentHelp) {
       args.privateKey = args.certDir + '/' + args.privateKey;
       args.clientCert = args.certDir + '/' + args.clientCert;
       args.caCert = args.certDir + '/' + args.caCert;
+      args.csCert = args.certDir + '/' + args.csCert;
    }
    //
    // If the configuration file is defined, read it in and set the parameters based
@@ -164,6 +167,13 @@ module.exports = function(description, args, processFunction, argumentHelp) {
             args.caCert = args.certDir + '/' + config.caCert;
          } else {
             args.caCert = config.caCert;
+         }
+      }
+      if (!isUndefined(config.csCert)) {
+         if (!isUndefined(args.certDir)) {
+            args.csCert = args.certDir + '/' + config.csCert;
+         } else {
+            args.csCert = config.csCert;
          }
       }
       if (!isUndefined(config.host)) {

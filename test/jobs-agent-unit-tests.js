@@ -28,6 +28,32 @@ var jobsAgentModule = rewire('../examples/jobs-agent');
 
 var isUndefined = require('../common/lib/is-undefined');
 
+// valid test codesign certificate containing public key
+const codeSignCertValid = '-----BEGIN CERTIFICATE-----\n\
+MIICfDCCAiKgAwIBAgIILHaXB2Gj4K0wCgYIKoZIzj0EAwIwgZgxCzAJBgNVBAYT\n\
+AlVTMRAwDgYDVQQIEwdNb250YW5hMRMwEQYDVQQHEwpMaXZpbmdzdG9uMSUwIwYD\n\
+VQQKExxBcGVydHVyZSBTY2llbmNlIENvcnBvcmF0aW9uMTswOQYDVQQDEzJBcGVy\n\
+dHVyZSBTY2llbmNlIFBvcnRhbCBDZXJ0aWZpY2F0ZSBBdXRob3JpdHkgLSBSNDAe\n\
+Fw0wODAxMDEwODAwMDFaFw0yOTAxMDEwNzU5NTlaMIGYMQswCQYDVQQGEwJVUzEQ\n\
+MA4GA1UECBMHTW9udGFuYTETMBEGA1UEBxMKTGl2aW5nc3RvbjElMCMGA1UEChMc\n\
+QXBlcnR1cmUgU2NpZW5jZSBDb3Jwb3JhdGlvbjE7MDkGA1UEAxMyQXBlcnR1cmUg\n\
+U2NpZW5jZSBQb3J0YWwgQ2VydGlmaWNhdGUgQXV0aG9yaXR5IC0gUjQwWTATBgcq\n\
+hkjOPQIBBggqhkjOPQMBBwNCAAQZQB7krlbWVeOE15wqeHinSA1FN0C3iM5+olSW\n\
+j5ZtkPIBNQtyFMgeWCGvpJNUOs4mdnf6EfukXWs/jf2odydmo1QwUjAdBgNVHQ4E\n\
+FgQUfRkDG64WfL5wyEsfhHGvncE2aeswDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8E\n\
+BAMCB4AwEwYDVR0lBAwwCgYIKwYBBQUHAwMwCgYIKoZIzj0EAwIDSAAwRQIhAKkk\n\
+CNbMSWv0vWXk2s7fCASw3IrmdgOeemWo+6S1GGK0AiBASh5CUkkZA2eCnXTD8Zf0\n\
+U0CZNvEeG8eg6JkVR/BRRw==\n\
+-----END CERTIFICATE-----';
+
+// invalid codesign certificate
+const codeSignCertInvalid = '-----BEGIN CERTIFICATE-----\n\
+MIICfDCCAiKgAwIBAgIILHaXB2Gj4K0wCgYIKoZIzj0EAwIwgZgxCzAJBgNVBAYT\n\
+InvalidInvalidInvalidInvalidInvalidInvalidInvalidInvalidInvalidI\n\
+CNbMSWv0vWXk2s7fCASw3IrmdgOeemWo+6S1GGK0AiBASh5CUkkZA2eCnXTD8Zf0\n\
+U0CZNvEeG8eg6JkVR/BRRw==\n\
+-----END CERTIFICATE-----';
+
 //
 // Object to simulate file system operations using in memory structure
 //
@@ -103,6 +129,7 @@ const tempDir = '/';
 copyFileModule.__set__('fs', fs);
 downloadFileModule.__set__({'fs': fs, 'copyFile': copyFileModule});
 jobsAgentModule.__set__({'fs': fs, 'copyFile': copyFileModule, 'downloadFile': downloadFileModule, 'path': pathStub});
+jobsAgentModule.__set__('codeSignCertFileName', '/codeSignCert.pem')
 
 describe( "jobs agent unit tests", function() {
     function buildJobObject(operation, status, jobDocument, inProgress, failed, succeeded) {
@@ -285,6 +312,130 @@ describe( "jobs agent unit tests", function() {
             );
             installHandler(job);
         }); 
+
+        it("valid signature, valid cert, valid file, called succeeded callback", function(done) {
+            fs.reset();
+            fs.writeFileSync('/testNewFile.txt', '0123456789');
+            fs.writeFileSync('/codeSignCert.pem', codeSignCertValid);
+
+            fakeCallbackInProgress.reset();
+            fakeCallbackFailed.reset();
+            fakeCallbackSucceeded.reset();
+            var job = buildJobObject('install', { status: 'QUEUED' }, {
+                    packageName: 'testPackageName', workingDirectory: tempDir,
+                    files: [ { fileName: 'testFileName.txt', fileSource: { url: 'file:///testNewFile.txt' },
+                    signature: { codesign: { rawPayloadSize: 10, signatureAlgorithm: 'SHA256withECDSA',
+                                 signature: 'MEUCIQD8asLn+RmOqjD8YgUhNR/gobfvbN5av0J0jOvDQAWOLgIgGIERU0FKmrL3Es1P1dOCcovfjGUUuGb8KHSc8+D4380='} } } ] },
+                function(statusDetails, cb) {
+                    fakeCallbackInProgress();
+                    console.log(statusDetails);
+                    cb();
+                },
+                fakeCallbackFailed,
+                function(statusDetails, cb) {
+                    console.log(statusDetails);
+                    cb();
+                    assert(fakeCallbackInProgress.calledOnce);
+                    sinon.assert.notCalled(fakeCallbackFailed);
+                    assert(fs.readFileSync('/testFileName.txt').toString() === '0123456789');
+                    done();
+                }
+            );
+            installHandler(job);
+        });
+
+        it("valid signature, valid cert, bad file, called failed callback", function(done) {
+            fs.reset();
+            fs.writeFileSync('/testNewFile.txt', 'invalid');
+            fs.writeFileSync('/codeSignCert.pem', codeSignCertValid);
+
+            fakeCallbackInProgress.reset();
+            fakeCallbackFailed.reset();
+            fakeCallbackSucceeded.reset();
+            var job = buildJobObject('install', { status: 'QUEUED' }, {
+                    packageName: 'testPackageName', workingDirectory: tempDir,
+                    files: [ { fileName: 'testFileName.txt', fileSource: { url: 'file:///testNewFile.txt' },
+                    signature: { codesign: { rawPayloadSize: 10, signatureAlgorithm: 'SHA256withECDSA',
+                                 signature: 'MEUCIQD8asLn+RmOqjD8YgUhNR/gobfvbN5av0J0jOvDQAWOLgIgGIERU0FKmrL3Es1P1dOCcovfjGUUuGb8KHSc8+D4380='} } } ] },
+                function(statusDetails, cb) {
+                    fakeCallbackInProgress();
+                    console.log(statusDetails);
+                    cb();
+                },
+                function(statusDetails, cb) {
+                    console.log(statusDetails);
+                    cb();
+                    assert(fakeCallbackInProgress.calledOnce);
+                    sinon.assert.notCalled(fakeCallbackSucceeded);
+                    assert(fs.readFileSync('/testFileName.txt').toString() === 'invalid');
+                    done();
+                },
+                fakeCallbackSucceeded
+            );
+            installHandler(job);
+        });
+
+        it("valid signature, invalid cert, valid file, called failed callback", function(done) {
+            fs.reset();
+            fs.writeFileSync('/testNewFile.txt', '0123456789');
+            fs.writeFileSync('/codeSignCert.pem', codeSignCertInvalid);
+
+            fakeCallbackInProgress.reset();
+            fakeCallbackFailed.reset();
+            fakeCallbackSucceeded.reset();
+            var job = buildJobObject('install', { status: 'QUEUED' }, {
+                    packageName: 'testPackageName', workingDirectory: tempDir,
+                    files: [ { fileName: 'testFileName.txt', fileSource: { url: 'file:///testNewFile.txt' },
+                    signature: { codesign: { rawPayloadSize: 10, signatureAlgorithm: 'SHA256withECDSA',
+                                 signature: 'MEUCIQD8asLn+RmOqjD8YgUhNR/gobfvbN5av0J0jOvDQAWOLgIgGIERU0FKmrL3Es1P1dOCcovfjGUUuGb8KHSc8+D4380='} } } ] },
+                function(statusDetails, cb) {
+                    fakeCallbackInProgress();
+                    console.log(statusDetails);
+                    cb();
+                },
+                function(statusDetails, cb) {
+                    console.log(statusDetails);
+                    cb();
+                    assert(fakeCallbackInProgress.calledOnce);
+                    sinon.assert.notCalled(fakeCallbackSucceeded);
+                    assert(fs.readFileSync('/testFileName.txt').toString() === '0123456789');
+                    done();
+                },
+                fakeCallbackSucceeded
+            );
+            installHandler(job);
+        });
+
+        it("invalid signature, valid cert, valid file, called failed callback", function(done) {
+            fs.reset();
+            fs.writeFileSync('/testNewFile.txt', '0123456789');
+            fs.writeFileSync('/codeSignCert.pem', codeSignCertValid);
+
+            fakeCallbackInProgress.reset();
+            fakeCallbackFailed.reset();
+            fakeCallbackSucceeded.reset();
+            var job = buildJobObject('install', { status: 'QUEUED' }, {
+                    packageName: 'testPackageName', workingDirectory: tempDir,
+                    files: [ { fileName: 'testFileName.txt', fileSource: { url: 'file:///testNewFile.txt' },
+                    signature: { codesign: { rawPayloadSize: 10, signatureAlgorithm: 'SHA256withECDSA',
+                                 signature: 'MEUCIQD8asLn+RmOqjD8YgUhINVALIDvbN5av0J0jOvDQAWOLgIgGIERU0FKmrL3Es1P1dOCcovfjGUUuGb8KHSc8+D4380='} } } ] },
+                function(statusDetails, cb) {
+                    fakeCallbackInProgress();
+                    console.log(statusDetails);
+                    cb();
+                },
+                function(statusDetails, cb) {
+                    console.log(statusDetails);
+                    cb();
+                    assert(fakeCallbackInProgress.calledOnce);
+                    sinon.assert.notCalled(fakeCallbackSucceeded);
+                    assert(fs.readFileSync('/testFileName.txt').toString() === '0123456789');
+                    done();
+                },
+                fakeCallbackSucceeded
+            );
+            installHandler(job);
+        });
 
         it("valid url, invalid checksum hash algorithm, called failed callback", function(done) { 
             fs.reset();
@@ -492,8 +643,6 @@ describe( "jobs agent unit tests", function() {
                 fakeCallbackSucceeded
             );
             installHandler(job);
-        }); 
-
-    }); 
+        });
+    });
 });
-

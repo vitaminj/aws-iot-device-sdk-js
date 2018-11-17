@@ -30,7 +30,6 @@ ERR_CHECKSUM_FAILED
 ERR_UNEXPECTED
 */
 
-
 //node.js deps
 var crypto = require('crypto');
 var { exec } = require('child_process');
@@ -82,6 +81,11 @@ var installedPackages = [];
 // Track information about running state of packages
 //
 var packageRuntimes = {};  
+
+//
+// Code sign certificate file name
+//
+var codeSignCertFileName;
 
 //
 // Private function to show jobs errors
@@ -138,6 +142,69 @@ function validateChecksum(fileName, checksum, cb) {
          cb(err);
       } else {
          cb();
+      }
+   }).on('error', function (err) {
+      err.fileName = fileName;
+      cb(err);
+   });
+}
+
+
+//
+// Private function to validate signature
+//
+function validateSignature(fileName, signature, cb) {
+   if (isUndefined(signature) || isUndefined(signature.codesign)) {
+      cb();
+      return;
+   }
+
+   if (isUndefined(codeSignCertFileName)) {
+      cb(new Error('No code sign certificate file specified'));
+      return;
+   }
+
+   var codeSignCert;
+
+   try {
+      codeSignCert = fs.readFileSync(codeSignCertFileName, 'utf8');
+   } catch (err) {
+      // unable to read codeSignCertFileName file
+      cb(new Error('Error encountered trying to read ' + codeSignCertFileName));
+      return;
+   }
+
+   var verify;
+   try {
+      verify = crypto.createVerify(signature.codesign.signatureAlgorithm);
+   } catch (err) {
+      console.warn('Unable to use signature algorithm: ' + signature.codesign.signatureAlgorithm + ' attempting to use default algorithm SHA256');
+      try {
+         verify = crypto.createVerify('SHA256');
+      } catch (err) {
+         cb(err);
+         return;
+      }
+   }
+
+   var stream = fs.createReadStream(fileName);
+
+   stream.on('data', function (data) {
+      verify.write(data);
+   }).on('end', function () {
+      verify.end();
+
+      try {
+         if (!verify.verify(codeSignCert, signature.codesign.signature, 'base64')) {
+            var err = new Error('Signature validation failed');
+            err.fileName = fileName;
+            cb(err);
+         } else {
+            cb();
+         }
+      } catch (err) {
+         cb(err);
+         return;
       }
    }).on('error', function (err) {
       err.fileName = fileName;
@@ -253,7 +320,13 @@ function downloadFiles(job, iFile, cb) {
          if (isUndefined(downloadError)) {
             validateChecksum(filePath, file.checksum, function(checksumError) {
                if (isUndefined(checksumError)) {
-                  downloadFiles(job, iFile + 1, cb);
+                  validateSignature(filePath, file.signature, function(signatureError) {
+                     if (isUndefined(signatureError)) {
+                        downloadFiles(job, iFile + 1, cb);
+                     } else {
+                        cb(signatureError);
+                     }
+                  });
                } else {
                   cb(checksumError);
                }
@@ -611,6 +684,8 @@ function jobsAgent(args) {
       thingName: args.thingName,
       debug: args.Debug
    });
+
+   codeSignCertFileName = args.csCert;
 
    jobs
       .on('connect', function() {
