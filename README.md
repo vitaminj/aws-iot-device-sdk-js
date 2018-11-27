@@ -733,6 +733,10 @@ and values as key-value pairs:
     }
 ```
 
+**NOTE:**  WebSocket implementations in most common web browsers do not allow setting of
+custom WebSocket headers. This is a known obstacle to using AWS IoT custom authentication
+in browser applications. AWS IoT is investigating alternate approaches to enable use of
+custom authentication in such applications in the future.
 
 <a name="programs"></a>
 ## Example Programs
@@ -1194,6 +1198,11 @@ When the jobs-agent receives a restart job document it will attempt to restart t
 <a name="browser"></a>
 ## Browser Applications
 This SDK can be packaged to run in a browser using [browserify](http://browserify.org/) or [webpack](https://webpack.js.org/), and includes helper scripts and example application code to help you get started writing browser applications that use AWS IoT.
+
+**NOTE:**  WebSocket implementations in most common web browsers do not allow setting of
+custom WebSocket headers. This is a known obstacle to using AWS IoT custom authentication
+in browser applications. AWS IoT is investigating alternate approaches to enable use of
+custom authentication in such applications in the future.
 
 ### Background
 Browser applications connect to AWS IoT using [MQTT over the Secure WebSocket Protocol](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html).  There are some important differences between Node.js and browser environments, so a few adjustments are necessary when using this SDK in a browser application.
