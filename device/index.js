@@ -29,13 +29,9 @@ var path = require('path');
 var fs = require('fs');
 
 //begin module
-function makeTwoDigits(n) {
-   if (n > 9) {
-      return n;
-   } else {
-      return '0' + n;
-   }
-}
+ function makeTwoDigits(n) { 
+   return (n > 9) ? n : '0' + n;
+  };
 
 function getDateTimeString() {
    var d = new Date();
@@ -97,7 +93,7 @@ function signUrl(method, scheme, hostname, path, queryParams, accessId, secretKe
       asBytes: true
    });
 
-   if (debug === true) {
+   if (debug) {
       console.log('hashed canonical request: ' + hashedCanonicalRequest + '\n');
    }
 
@@ -106,13 +102,13 @@ function signUrl(method, scheme, hostname, path, queryParams, accessId, secretKe
       today + '/' + region + '/' + serviceName + '/aws4_request\n' +
       hashedCanonicalRequest;
 
-   if (debug === true) {
+   if (debug) {
       console.log('string to sign: ' + stringToSign + '\n');
    }
 
    var signingKey = getSignatureKey(secretKey, today, region, serviceName);
 
-   if (debug === true) {
+   if (debug) {
       console.log('signing key: ' + signingKey + '\n');
    }
 
@@ -120,7 +116,7 @@ function signUrl(method, scheme, hostname, path, queryParams, accessId, secretKe
       asBytes: true
    });
 
-   if (debug === true) {
+   if (debug) {
       console.log('signature: ' + signature + '\n');
    }
 
@@ -132,7 +128,7 @@ function signUrl(method, scheme, hostname, path, queryParams, accessId, secretKe
 
    var url = scheme + hostname + path + '?' + finalParams;
 
-   if (debug === true) {
+   if (debug) {
       console.log('url: ' + url + '\n');
    }
 
@@ -374,7 +370,7 @@ function DeviceClient(options) {
    //
    // Metrics will be enabled by default unless the user explicitly disables it
    //
-   if (isUndefined(options.enableMetrics) || options.enableMetrics === true){
+   if (isUndefined(options.enableMetrics) || options.enableMetrics){
       if (isUndefined(options.username)) {
          options.username = defaultUsername;
       } else {
@@ -533,7 +529,7 @@ function DeviceClient(options) {
       }
    } 
 
-   if ((!isUndefined(options)) && (options.debug === true)) {
+   if ((!isUndefined(options)) && (options.debug)) {
       console.log(options);
       console.log('attempting new mqtt connection...');
    }
@@ -620,14 +616,14 @@ function DeviceClient(options) {
             url = prepareWebSocketUrl(options, awsAccessId, awsSecretKey, awsSTSToken);
          }
 
-         if (options.debug === true) {
+         if (options.debug) {
             console.log('using websockets, will connect to \'' + url + '\'...');
          }
 
          options.url = url;
       } else if (protocol === 'wss-custom-auth') {
          options.url = prepareWebSocketCustomAuthUrl(options);
-         if (options.debug === true) {
+         if (options.debug) {
             console.log('using websockets custom auth, will connect to \'' + options.url + '\'...');
          }
          // Treat the request as a standard websocket request from here onwards
