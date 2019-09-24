@@ -345,7 +345,6 @@ follows:
   * `customAuthHeaders`: used to specify your custom authorization headers when `protocol` is set to 'wss-custom-auth'. The fields 'X-Amz-CustomAuthorizer-Name', 'X-Amz-CustomAuthorizer-Signature', and the field for your token name are required.
   * `keepalive`: used to specify the time interval for each ping request. Default is set to 300 seconds to connect to AWS IoT.
   * `enableMetrics`: used to report SDK version usage metrics. It is set to true by default. To disable metrics collection, set value to false.
-  * `clean`: set to 'false' to establish a persistent session (default 'true'). Read more about persistent sessions [here](https://docs.aws.amazon.com/iot/latest/developerguide/mqtt-persistent-sessions.html).
 
 All certificates and keys must be in PEM format.
 
@@ -734,10 +733,6 @@ and values as key-value pairs:
     }
 ```
 
-**NOTE:**  WebSocket implementations in most common web browsers do not allow setting of
-custom WebSocket headers. This is a known obstacle to using AWS IoT custom authentication
-in browser applications. AWS IoT is investigating alternate approaches to enable use of
-custom authentication in such applications in the future.
 
 <a name="programs"></a>
 ## Example Programs
@@ -1114,9 +1109,7 @@ When the jobs-agent receives a shutdown job document it will attempt to shutdown
 ```
 ##### install operation
 When the jobs-agent receives an install job document it will attempt to install the files specified
-in the job document. An install job document should follow this general format. In order to use a
-codesign signature a codesign certificate must be specified with the --code-sign-certificate option
-when the jobs-agent is launched. For more information run the jobs-agent with the -h option.
+in the job document. An install job document should follow this general format.
 ```
  {
   "operation": "install",
@@ -1136,13 +1129,6 @@ when the jobs-agent is launched. For more information run the jobs-agent with th
           "value": "9569257356cfc5c7b2b849e5f58b5d287f183e08627743498d9bd52801a2fbe4"
         },
         "hashAlgorithm": "SHA256"
-      },
-      "signature": {
-        "codesign": {
-          "rawPayloadSize": 100,
-          "signatureAlgorithm": "SHA256withECDSA",
-          "signature": "MEUCIQD8asLn+RmOqjD8YgUhNR/gobfvbN5av0J0jOvDQAWOLgIgGIERU0FKmrL3Es1P1dOCcovfjGUUuGb8KHSc8+D4380="
-        }
       }
     },
     {
@@ -1165,12 +1151,6 @@ matches a previous install operation then the new install operation overwrites t
   * `checksum`: Optional file checksum
     * `inline.value`: Checksum value
     * `hashAlgorithm`: Checksum hash algorithm used
-  * `signature`: Optional file signature
-    * `codesign`: codesign property
-      * `rawPayloadSize`: expected file size
-      * `signatureAlgorithm`: signature algorithm used
-      * `signature`: actual signature
-
 ##### start operation
 When the jobs-agent receives a start job document it will attempt to startup the specified package.
 ```
@@ -1199,11 +1179,6 @@ When the jobs-agent receives a restart job document it will attempt to restart t
 <a name="browser"></a>
 ## Browser Applications
 This SDK can be packaged to run in a browser using [browserify](http://browserify.org/) or [webpack](https://webpack.js.org/), and includes helper scripts and example application code to help you get started writing browser applications that use AWS IoT.
-
-**NOTE:**  WebSocket implementations in most common web browsers do not allow setting of
-custom WebSocket headers. This is a known obstacle to using AWS IoT custom authentication
-in browser applications. AWS IoT is investigating alternate approaches to enable use of
-custom authentication in such applications in the future.
 
 ### Background
 Browser applications connect to AWS IoT using [MQTT over the Secure WebSocket Protocol](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html).  There are some important differences between Node.js and browser environments, so a few adjustments are necessary when using this SDK in a browser application.
