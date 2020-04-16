@@ -1,3 +1,8 @@
+## [2.2.5](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.2.5) (Apr 7, 2020)
+
+Bugfixes/Improvements
+  - Re-adding github related templates and readme change.
+
 ## [2.2.4](https://github.com/aws/aws-iot-device-sdk-js/releases/tag/v2.2.4) (Mar 31, 2020)
   
 Bugfixes/Improvements
